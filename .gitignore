@@ -1,0 +1,6 @@
+.Rhistory
+.RData
+.Rproj.user
+fastq/
+data-raw/
+cache/

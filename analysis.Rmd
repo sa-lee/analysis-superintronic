@@ -1,0 +1,232 @@
+---
+title: "Exploring intron signal with superintronic"
+author: "Stuart Lee, Charity Law"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+                      fig.align = "center",
+                      comment = "#>", 
+                      message = FALSE,
+                      warning = FALSE,
+                      fig.path = here::here("figures/"),
+                      cache.path = here::here("cache/")
+                      )
+
+# pre load libraries
+suppressPackageStartupMessages(library(plyranges))
+suppressPackageStartupMessages(library(superintronic))
+```
+
+# Introduction
+
+Using superintronic to reanalyse the human cell line mixture RNA-seq data
+to find IR-like genes. 
+
+
+## Preparing GFF/GTF files
+
+```{r gff}
+library(superintronic)
+gff <- here::here("data-raw", "gencode.v27.annotation.gtf.gz")
+
+# uncomment if no internet connection
+# ref <- BSgenome.Hsapiens.UCSC.hg38::BSgenome.Hsapiens.UCSC.hg38 %>% 
+#   get_genome_info() %>% 
+#   GenomeInfoDb::keepStandardChromosomes("Homo sapiens", "coarse")
+
+gr_gff <- read_gff(gff, genome_info = "hg38")
+parts <- collect_parts(gr_gff)
+parts
+```
+
+These can be interrogated as desired, but for our purposes we will keep
+genes that are protein coding, on main chromosomes but not mitochondrial 
+genome, and do not overlap any other genes and have more than one exon.
+
+```{r default-filter}
+parts_sub <- parts %>% 
+  filter(
+    gene_type == "protein_coding", 
+    n_olaps == 1, 
+    seqnames != "chrM",
+    lengths(exonic_parts) > 1
+  ) %>%
+  GenomeInfoDb::keepStandardChromosomes("Homo sapiens", "coarse") %>% 
+  GenomeInfoDb::dropSeqlevels("chrM", "coarse")
+
+parts_sub
+```
+
+
+## Preparing BAM files
+
+Generate a design data.frame containing filenames with BAM files, 
+and other variables of interest.
+
+```{r prepare-design}
+design <- read.table(
+  here::here("data-raw", "targets.txt"),
+  header = TRUE,
+  stringsAsFactors = FALSE
+) %>% 
+  S4Vectors::DataFrame() %>% 
+  transform(
+    File = S4Vectors::Rle(here::here("data-raw", sub("\\.", "-", File)))
+  ) %>% 
+  BiocGenerics::subset(Replicate %in% c("R1", "R2", "R3") & Mixture == 0,
+                       select = c(File, Mixture, Replicate, Kit)) %>%  
+  S4Vectors::transform(Sample = paste0(Replicate, "_", "HCC287"),
+                       CellLine = "HCC287",
+                       Kit = S4Vectors::Rle(ifelse(Kit == "mRNA", "polyA", "total-RNA"))
+  )
+design
+```
+
+
+Now we can take our BAM files and compute coverage. This
+produces a large GRanges object, with two metadata columns,
+`source` which is the BAM file  that coverage was computed for, and `score`
+which is the coverage score. By default, this function computes
+the coverage scores in parallel using BiocParallel.
+
+
+```{r compute-coverage, cache = TRUE}
+cvg <- compute_coverage_long(design, 
+                             source = "File",
+                             .which = get_genome_info(parts_sub),
+                             .genome_info = get_genome_info(parts_sub),
+                             .parallel = BiocParallel::MulticoreParam(4))
+
+cvg
+```
+
+## Coverage over intronic/exonic regions
+
+Now all the ingredients are in place to merge the coverage scores
+to our prepared annotation with `join_parts()`. This again
+returns a GRanges object, restricted to the intersection of the 
+coverage ranges with intron/exon ranges. Additional columns are added
+corresponding to the properties of the intron/exon.
+
+```{r merge-annotations, eval = skip}
+cvg_over_features <- join_parts(cvg, parts_sub)
+
+cvg_over_features
+```
+
+Now we will compute summaries (rangnostics) for the polyA Kit to detect IR genes.
+
+
+
+
+```{r filter-new}
+polyA_features <- cvg_over_features %>% 
+  filter(Kit == "polyA") %>% 
+  select(-File)
+
+# compute intron/exon features
+res <- polyA_features %>% 
+  group_by(gene_id, feature_type) %>% 
+  summarise(feature_average = Hmisc::wtd.mean(log2(score + 0.5), width),
+            feature_sd = sqrt(Hmisc::wtd.var(log2(score + 0.5), width)),
+            feature_length = sum(BiocGenerics::unique(feature_length)),
+            score = score,
+            n_bases = width,
+            start = min(start),
+            end = max(end),
+            seqnames = unlist(BiocGenerics::unique(seqnames))
+  ) %>% 
+  GenomicRanges::makeGRangesFromDataFrame(keep.extra.columns = TRUE) 
+
+
+E_val <- res %>% 
+  filter(feature_type == "exon") %>% 
+  summarise(E = mean(sum(score*n_bases) / sum(n_bases))) %>% 
+  .$E
+
+res <- res %>% 
+  mutate(E = E_val,
+         bases_above_E = sum(n_bases[score > E]),
+         prop_bases_above_E = bases_above_E / sum(n_bases)) %>% 
+  select(-n_bases, -score, -seqnames, -start, -end, -width, -strand, .drop_ranges = TRUE) %>% 
+  dplyr::as_tibble() 
+
+res2 <- tidyr::gather(res, "key", "value", -gene_id, -feature_type) %>% 
+  mutate(var = paste0(feature_type, "_", key)) %>% 
+  select(-feature_type, -key) %>% 
+  arrange(gene_id) %>% 
+  tidyr::spread(var, value)
+```
+
+## Plot the results
+
+```{r}
+highlights <- c("ENSG00000136930.12", 
+                "ENSG00000134884.13", 
+                "ENSG00000102144.13")
+
+hex <- function(data, mapping, ...) {
+  
+  ggplot2::ggplot(data = data, mapping = mapping) + 
+    ggplot2::geom_hex(...) +
+    ggplot2::geom_point(data = filter(data, highlight == TRUE), colour = "red")
+}
+
+res2 %>% 
+  mutate(highlight = gene_id %in% highlights) %>%
+  select(-gene_id, -exon_E, -intron_E, 
+         -exon_feature_length, -intron_feature_length) %>% 
+  GGally::ggpairs(columns = 1:8, 
+                  lower = list(continuous = GGally::ggally_density),
+                  upper = "blank") 
+
+# look at modelling the features
+# calculate accross experiments / between groups
+  
+```
+
+Now we can try out some filters...
+
+```{r}
+hits <- all_features %>% 
+  group_by(Kit) %>% 
+  filter(exon_average > E, intron_average < 6, total_bases_above_E > 5000) %>% 
+  ungroup() %>% 
+  group_by(gene_id)
+hits
+```
+
+And plot the results:
+
+```{r}
+save_plot <- function(.x, .y) {
+  if (nrow(.x) == 2) {
+    fname <- paste0(.y$gene_id,  "-both-ir.png")
+  } else {
+    fname <- paste0(.y$gene_id, "-", .x$Kit, "-ir.png")
+  }
+  fname <- here::here("figures", fname)
+  p <- parts_sub %>% 
+    filter(gene_id == !!.y$gene_id) %>% 
+    view_coverage(cvg_over_features, ., hline, "Kit")
+  ggplot2::ggsave(fname, p)
+} 
+
+hline <- dplyr::distinct(all_features, Kit, E)
+
+
+hits %>% 
+  dplyr::group_walk(save_plot)
+  
+
+```
+
+* lagged difference 
+* cutoffs displayed on rangnostics plot
+* look without groupings
+* isoform switch analyzer
