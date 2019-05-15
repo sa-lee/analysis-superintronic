@@ -33,7 +33,7 @@ system("module load kallisto/0.44.0")
 
 
 command <- "kallisto quant"
-args <- c("-i", index, "-o", "-output", NA, 
+args <- c("-i", index, "-o",  NA, 
           "--single", "-l", 200, "-s", 20)
 
 # loop over each sample
@@ -44,7 +44,7 @@ for (i in seq_along(samples)) {
   
   if (!dir.exists(outdir)) dir.create(outdir)
   
-  args[5] <- outdir
+  args[4] <- outdir
   
   fastqs <- paste(row$fq_files[[1]], collapse = " ")
   call <- paste(command, paste(args, collapse = " "), fastqs)
