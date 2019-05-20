@@ -22,14 +22,11 @@ suppressPackageStartupMessages(library(plyranges))
 suppressPackageStartupMessages(library(superintronic))
 
 hex <- function(data, mapping, ...) {
-  
   ggplot2::ggplot(data = data, mapping = mapping) + 
     ggplot2::geom_hex(...) +
-    # ggplot2::geom_point(data = filter(data, highlight == TRUE), colour = "red") +
+    ggplot2::geom_point(data = filter(data, gene_id %in% gene_paper), colour = "red") +
     ggplot2::scale_fill_viridis_c(direction = -1)
 }
-
-
 ```
 
 # Introduction
@@ -149,13 +146,11 @@ genes. This consists of three steps
 
 1. Computing the average log-coverage over all exon/intron features:
 
-* lagged difference 
-
 
 ```{r rangenostics-01}
 polyA_features <- cvg_over_features %>% 
-  filter(Kit == "polyA") %>% 
-  select(-File)
+  plyranges::filter(Kit == "polyA") %>% 
+  plyranges::select(-File)
 
 # compute intron/exon features
 res <- polyA_features %>% 
@@ -163,73 +158,100 @@ res <- polyA_features %>%
   group_by(gene_id, feature_type) %>% 
   summarise(feature_average = Hmisc::wtd.mean(log_score, width),
             feature_sd = sqrt(Hmisc::wtd.var(log_score, width)),
-            feature_length = sum(BiocGenerics::unique(feature_length)),
-            log_score = log_score,
+            feature_length = sum(BiocGenerics::unique(feature_length)) * n_distinct(Replicate),
+            score = score,
             n_bases = width,
             start = min(start),
             end = max(end),
             seqnames = unlist(BiocGenerics::unique(seqnames))
   ) %>% 
-  GenomicRanges::makeGRangesFromDataFrame(keep.extra.columns = TRUE) 
-
+  GenomicRanges::makeGRangesFromDataFrame(keep.extra.columns = TRUE)
+res
 ```
 
 
 2. For exon features computing the mean and variance of average log-coverage 
-   over all genes (lumpiness and stability).
+   over all genes (lumpiness).
    
 ```{r rangenostics-02}
 E_val <- res %>% 
-  filter(feature_type == "exon") %>% 
-  summarise(E_mu = mean(feature_average), E_sigma =  sd(feature_average))
+  filter(feature_type == "exon") %>%
+  filter(feature_sd > 0) %>% 
+  summarise(
+    E_mu = mean(feature_average),
+    E_sigma = mean(feature_sd),
+    E_raw = mean(sum(score*n_bases) / sum(n_bases))
+  )
+E_val
 
 mcols(res) <- cbind(mcols(res), E_val)
 ```
    
    
-3. Compute the number and proportion 
-   of bases with a log-coverage score above mean, like wise the number above
-   the standard deviation.
+3. Compute the avergae number of bases with a 
+   log-coverage score above the E values defined above.
 
 ```{r rangenostics-03}
-res <- res %>% 
-  mutate(E = E_val,
-         bases_above_E = sum(n_bases[score > E]),
-         prop_bases_above_E = bases_above_E / sum(n_bases)) %>% 
-  select(-n_bases, -score, -seqnames, -start, -end, -width, -strand, 
+rango <- res %>% 
+  mutate(
+    n_bases_E_raw = sum(n_bases[score > E_raw]),
+    prop_bases_E_raw = n_bases_E_raw / sum(n_bases)
+  ) %>% 
+  plyranges::select(-n_bases, -score, -seqnames, -start, -end, -width, -strand, 
          .drop_ranges = TRUE) %>% 
-  dplyr::as_tibble() 
+  dplyr::as_tibble() %>% 
+  group_by(feature_type) %>% 
+  tidyr::nest() %>% 
+  mutate(
+    smooth = lapply(data, function(x) {
+      mgcv::gam(feature_sd ~ s(feature_average), data = x)
+      }),
+    augment = lapply(smooth, broom::augment),
+  ) %>% 
+  tidyr::unnest(data, augment) %>% 
+  dplyr::select(-dplyr::ends_with("1"), -.sigma)
+
+# rangenostics feature_average vs feature_sd coloured by n of bases above
+# average raw exon coverage
+ggplot(rango, aes(x = feature_average, 
+                  y = feature_sd, 
+                  colour = log2(n_bases_E_raw +0.5))) +
+  geom_point() +
+  scale_color_viridis_c() +
+  geom_line(aes(y = .fitted), colour = "blue") +
+  geom_vline(aes(xintercept = E_mu), 
+             data  = dplyr::distinct(rango, feature_type, E_mu)) +
+  geom_hline(aes(yintercept = E_sigma),
+             data = dplyr::distinct(rango, feature_type, E_sigma)) +
+  facet_wrap(~feature_type) 
 ```
 
 
 4. Plot the results.
 
-* cutoffs displayed on rangnostics plot
 
 ```{r rangenostics}
-all_features <- tidyr::gather(res, "key", "value", -gene_id, -feature_type) %>% 
+all_features <- tidyr::gather(rango, "key", "value", 
+                              -gene_id, -feature_type, -E_mu, -E_sigma) %>% 
   mutate(var = paste0(feature_type, "_", key)) %>% 
-  select(-feature_type, -key) %>% 
+  plyranges::select(-feature_type, -key) %>% 
   arrange(gene_id) %>% 
   tidyr::spread(var, value)
 
-
 all_features %>% 
-  mutate(highlight = gene_id %in% highlights) %>%
-  select(-gene_id, -exon_E, -intron_E, 
-         -exon_feature_length, -intron_feature_length) %>% 
-  GGally::ggpairs(columns = 1:8, 
-                  lower = list(continuous = GGally::ggally_density),
-                  upper = "blank") 
-
-
+  plyranges::select(gene_id, exon_feature_average, 
+         intron_feature_average, intron_feature_sd, intron_n_bases_E_raw) %>% 
+  GGally::ggpairs(columns = 2:5, lower = list(continuous = hex))
 ```
 
 5. Decide on cut-offs for features.
 
+
 ```{r}
 hits <- all_features %>% 
-  filter(exon_average > E, intron_average < 6, total_bases_above_E > 5000) %>% 
+  filter(exon_feature_average > E_mu, 
+         intron_feature_sd > E_sigma, 
+         intron_n_bases_E_raw > quantile(intron_n_bases_E_raw, 0.99)) %>% 
   group_by(gene_id)
 hits
 ```
@@ -241,12 +263,10 @@ save_plot <- function(.x, .y) {
   target <- filter(parts_sub, gene_id == !!.y$gene_id)
   fname <- paste0(target$gene_name, "_coverage_plot.pdf")
   fname <- here::here("figures", fname)
-  p <- view_coverage(cvg_over_features, p, hline, "Kit")
+  p <- view_coverage(cvg_over_features, target, facets = "Kit")
   print(p)
   ggplot2::ggsave(fname, p, dpi = "retina")
 } 
-
-hline <- dplyr::distinct(all_features, Kit, E)
 
 hits %>% 
   dplyr::group_walk(save_plot)
@@ -312,6 +332,9 @@ specify a gene expression filter, but we have left that out for now.
 isf_filtered <- preFilter(isf,
                           acceptedGeneBiotype = "protein_coding",
                           removeSingleIsoformGenes = TRUE,
+                          geneExpressionCutoff = 1,
+                          isoformExpressionCutoff = 0.1,
+                          keepIsoformInAllConditions = TRUE
                           )
 isf_filtered
 ```
@@ -320,19 +343,81 @@ isf_filtered
 
 First we are required to run DEXSeq to test for isoform switching (
 this does all pairwise comparisions between conditions, which slows things
-down quite a bit.) and between the two kits.
+down quite a bit.) and between the two kits. We have used quite a small
+alpha since DEXSeq seems quite liberal...
 
 ```{r}
 isf_analysed <- isoformSwitchTestDEXSeq(isf_filtered, 
-                                        reduceToSwitchingGenes = TRUE)
+                                        reduceToSwitchingGenes = TRUE,
+                                        alpha = 0.01,
+                                        dIFcutoff = 0.15)
 isf_analysed
 ```
 
 
-Now we can analyse intron retention events:
+Now we can analyse intron retention events from one kit relative to another:
 
 ```{r}
+# this takes quite a while to compute...
 isf_analysed <- analyzeIntronRetention(isf_analysed)
+isf_analysed <- analyzeSwitchConsequences(isf_analysed, "intron_retention")
 
+# the result
+isf_analysed
+
+# isoforms with intron retention events
+isf_analysed$switchConsequence %>% 
+  dplyr::count(switchConsequence)
 ```
 
+And the results can be summarised at the gene level and compared to the 
+superintronic analysis. 
+
+At the gene level there are around 502 genes declared significant
+at 0.01 fdr cut-off between the polyA and total-RNA kits that
+are filtered for intron retention events.
+
+```{r top-table}
+is_res <- extractTopSwitches(isf_analysed, 
+                             filterForConsequences = TRUE, 
+                             n = NA) %>% 
+  dplyr::as_tibble()
+
+is_res
+```
+
+We can also look at the coverage plots for these genes (we will choose
+the top 20 genes):
+
+```{r}
+save_plot_isr <- function(.x, .y) {
+  target <- filter(parts, gene_id == !!.y$gene_id)
+  cvg_sub <- join_parts(cvg, target)
+  fname <- paste0(target$gene_name, "_isr_coverage_plot.pdf")
+  fname <- here::here("figures", fname)
+  p <- view_coverage(cvg_sub, target, facets = "Kit")
+  print(p)
+  ggplot2::ggsave(fname, p, dpi = "retina")
+}
+
+is_res %>% 
+  filter(Rank < 40) %>%
+  group_by(gene_id) %>% 
+  dplyr::group_walk(save_plot_isr)
+```
+
+
+
+Comparing to the previous analysis withs superintronic, there is no
+overlap between the two methods. (Of the genes in the isf analysis, only
+136 were kept by the filters in the superintronic, none of these were
+selected by our rangenostics).
+
+```{r}
+is_res <- is_res %>%
+  dplyr::left_join(all_features %>% 
+                     mutate(selected = gene_id %in% hits$gene_id) %>% 
+                     dplyr::select(gene_id, selected))
+
+dplyr::count(is_res, selected)
+```
