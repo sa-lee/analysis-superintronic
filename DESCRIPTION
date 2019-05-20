@@ -10,6 +10,7 @@ Imports:
     superintronic,
     IsoformSwitchAnalyzeR,
     GenomeInfoDb,
-    S4Vectors
+    S4Vectors,
+    rhdf5
 Remotes:
     sa-lee/superintronic

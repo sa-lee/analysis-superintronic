@@ -57,9 +57,12 @@ design <- read.table(
   ) %>% 
   BiocGenerics::subset(Replicate %in% c("R1", "R2", "R3") & Mixture == 0,
                        select = c(File, Mixture, Replicate, Kit)) %>%  
-  S4Vectors::transform(Sample = paste0(Replicate, "_", "HCC287"),
-                       CellLine = "HCC287",
-                       Kit = S4Vectors::Rle(ifelse(Kit == "mRNA", "polyA", "total-RNA"))
+  S4Vectors::transform(
+    CellLine = "HCC287",
+    Kit = S4Vectors::Rle(ifelse(Kit == "mRNA", "polyA", "total-RNA"))
+  ) %>% 
+  S4Vectors::transform(
+    Sample =  paste(Replicate, CellLine, Kit, sep = "_")
   )
 design
 ```
@@ -257,16 +260,79 @@ hits %>%
 The Bioconductor package `IsoformSwitchAnalyzeR` also allows for the exploration
 of intron retention events using a similar workflow:
 
-1. import isoform quantifications from kallisto/salmon/other program of your choice
+1. import isoform quantifications from kallisto/salmon/other program of your choice.
+
+We used kallisto quant on single read mode with an average fragment
+size of 200 and a standard deviation of 20, on all fastq files for each
+replicate in the polyA/total RNA kits. We need to use both here since 
+IsoformSwitchAnalzyeR requires biological replicates for testing for
+switching events.
 
 ```{r isoPrepare}
 library(IsoformSwitchAnalyzeR)
 
+quants <- importIsoformExpression(
+  parentDir = here::here("data", "kallisto/"),
+)
+
 ```
 
 
-2. preparing data structure called a `switchList` by importing annotations
+2. Preparing data structure called a `switchList` by importing annotations
 and design matrix.
+
+```{r}
+# use a simplified version of the design
+design_isf <- data.frame(sampleID = colnames(quants$abundance[,-1])) %>% 
+  mutate(condition =  rep(c("polyA", "total-RNA"), 3),
+         replicate = rep(c("R1", "R2", "R3"), each = 2)
+  )
+
+isf <- importRdata(
+  isoformCountMatrix = quants$counts,
+  isoformRepExpression = quants$abundance,
+  designMatrix = design_isf,
+  isoformExonAnnoation = here::here("data-raw", "gencode.v27.annotation.gtf.gz"),
+  isoformNtFasta = here::here("data-raw", "gencode.v27.transcripts.fa.gz"),
+  removeNonConvensionalChr = TRUE,
+)
+
+isf 
+```
+
+
 3. Filtering isoforms
-4. Running analysis for isoForm switch events
+
+
+Next we prefilter, the isoforms using roughly the same filters we used
+in the superintronic analysis above. To speed things up we could further
+specify a gene expression filter, but we have left that out for now.
+
+```{r}
+isf_filtered <- preFilter(isf,
+                          acceptedGeneBiotype = "protein_coding",
+                          removeSingleIsoformGenes = TRUE,
+                          )
+isf_filtered
+```
+
+4. Searching for intron retention events
+
+First we are required to run DEXSeq to test for isoform switching (
+this does all pairwise comparisions between conditions, which slows things
+down quite a bit.) and between the two kits.
+
+```{r}
+isf_analysed <- isoformSwitchTestDEXSeq(isf_filtered, 
+                                        reduceToSwitchingGenes = TRUE)
+isf_analysed
+```
+
+
+Now we can analyse intron retention events:
+
+```{r}
+isf_analysed <- analyzeIntronRetention(isf_analysed)
+
+```
 
