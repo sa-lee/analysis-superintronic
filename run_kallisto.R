@@ -26,6 +26,8 @@ samples <- read.table(
   mutate(fq_files = lapply(fq_target, function(x) find_files(x, fastq_path))) %>% 
   select(output, fq_target, fq_files)
   
+print(samples)
+
 # ready to run!
 # setup commands
 
@@ -37,7 +39,7 @@ args <- c("-i", index, "-o",  NA,
           "--single", "-l", 200, "-s", 20)
 
 # loop over each sample
-for (i in seq_along(samples)) {
+for (i in seq_len(nrow(samples))) {
   row <- samples[i, ]
   cat(paste("Preparing salmon call for", row$output), "\n")
   outdir <- here::here("data", "kallisto", row$output)
