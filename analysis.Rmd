@@ -20,15 +20,60 @@ knitr::opts_chunk$set(
 # pre load libraries
 suppressPackageStartupMessages(library(plyranges))
 suppressPackageStartupMessages(library(superintronic))
+
+hex <- function(data, mapping, ...) {
+  
+  ggplot2::ggplot(data = data, mapping = mapping) + 
+    ggplot2::geom_hex(...) +
+    # ggplot2::geom_point(data = filter(data, highlight == TRUE), colour = "red") +
+    ggplot2::scale_fill_viridis_c(direction = -1)
+}
+
+
 ```
 
 # Introduction
 
-Using superintronic to reanalyse the human cell line mixture RNA-seq data
-to find IR-like genes. 
+This report looks finding intron retention genes using simple summary statistics and
+visualisation using `superintronic`. We also compare the results to those
+obtained using `IsoFormSwitchAnalyzeR`.
+
+## Data
+
+We will use data from 6 samples from the human cell line mixture RNA-seq
+data. There are three biological replicates accross two library prepartion kits,
+a polyA kit and a total RNA kit. The BAM files have been previously aligned
+with subread using the hg20 reference genome. 
+
+```{r prepare-design}
+design <- read.table(
+  here::here("data-raw", "targets.txt"),
+  header = TRUE,
+  stringsAsFactors = FALSE
+) %>% 
+  S4Vectors::DataFrame() %>% 
+  transform(
+    File = S4Vectors::Rle(here::here("data-raw", sub("\\.", "-", File)))
+  ) %>% 
+  BiocGenerics::subset(Replicate %in% c("R1", "R2", "R3") & Mixture == 0,
+                       select = c(File, Mixture, Replicate, Kit)) %>%  
+  S4Vectors::transform(Sample = paste0(Replicate, "_", "HCC287"),
+                       CellLine = "HCC287",
+                       Kit = S4Vectors::Rle(ifelse(Kit == "mRNA", "polyA", "total-RNA"))
+  )
+design
+```
 
 
-## Preparing GFF/GTF files
+## `superintronic` analysis
+
+A superintronic analysis consists of three steps:
+1. Preparing the annotation and extract exonic/intronic parts
+2. Computing coverage over regions of interest
+3.
+
+
+### Preparing GFF/GTF files
 
 ```{r gff}
 library(superintronic)
@@ -63,30 +108,7 @@ parts_sub
 ```
 
 
-## Preparing BAM files
-
-Generate a design data.frame containing filenames with BAM files, 
-and other variables of interest.
-
-```{r prepare-design}
-design <- read.table(
-  here::here("data-raw", "targets.txt"),
-  header = TRUE,
-  stringsAsFactors = FALSE
-) %>% 
-  S4Vectors::DataFrame() %>% 
-  transform(
-    File = S4Vectors::Rle(here::here("data-raw", sub("\\.", "-", File)))
-  ) %>% 
-  BiocGenerics::subset(Replicate %in% c("R1", "R2", "R3") & Mixture == 0,
-                       select = c(File, Mixture, Replicate, Kit)) %>%  
-  S4Vectors::transform(Sample = paste0(Replicate, "_", "HCC287"),
-                       CellLine = "HCC287",
-                       Kit = S4Vectors::Rle(ifelse(Kit == "mRNA", "polyA", "total-RNA"))
-  )
-design
-```
-
+## Computing coverage over all replicates
 
 Now we can take our BAM files and compute coverage. This
 produces a large GRanges object, with two metadata columns,
@@ -95,7 +117,7 @@ which is the coverage score. By default, this function computes
 the coverage scores in parallel using BiocParallel.
 
 
-```{r compute-coverage, cache = TRUE}
+```{r compute-coverage, cache = TRUE, dependson=design}
 cvg <- compute_coverage_long(design, 
                              source = "File",
                              .which = get_genome_info(parts_sub),
@@ -119,23 +141,27 @@ cvg_over_features <- join_parts(cvg, parts_sub)
 cvg_over_features
 ```
 
-Now we will compute summaries (rangnostics) for the polyA Kit to detect IR genes.
+Now we will compute summaries (rangnostics) for the polyA Kit to detect IR 
+genes. This consists of three steps
+
+1. Computing the average log-coverage over all exon/intron features:
+
+* lagged difference 
 
 
-
-
-```{r filter-new}
+```{r rangenostics-01}
 polyA_features <- cvg_over_features %>% 
   filter(Kit == "polyA") %>% 
   select(-File)
 
 # compute intron/exon features
 res <- polyA_features %>% 
+  mutate(log_score = log2(score + 0.5)) %>% 
   group_by(gene_id, feature_type) %>% 
-  summarise(feature_average = Hmisc::wtd.mean(log2(score + 0.5), width),
-            feature_sd = sqrt(Hmisc::wtd.var(log2(score + 0.5), width)),
+  summarise(feature_average = Hmisc::wtd.mean(log_score, width),
+            feature_sd = sqrt(Hmisc::wtd.var(log_score, width)),
             feature_length = sum(BiocGenerics::unique(feature_length)),
-            score = score,
+            log_score = log_score,
             n_bases = width,
             start = min(start),
             end = max(end),
@@ -143,41 +169,49 @@ res <- polyA_features %>%
   ) %>% 
   GenomicRanges::makeGRangesFromDataFrame(keep.extra.columns = TRUE) 
 
+```
 
+
+2. For exon features computing the mean and variance of average log-coverage 
+   over all genes (lumpiness and stability).
+   
+```{r rangenostics-02}
 E_val <- res %>% 
   filter(feature_type == "exon") %>% 
-  summarise(E = mean(sum(score*n_bases) / sum(n_bases))) %>% 
-  .$E
+  summarise(E_mu = mean(feature_average), E_sigma =  sd(feature_average))
 
+mcols(res) <- cbind(mcols(res), E_val)
+```
+   
+   
+3. Compute the number and proportion 
+   of bases with a log-coverage score above mean, like wise the number above
+   the standard deviation.
+
+```{r rangenostics-03}
 res <- res %>% 
   mutate(E = E_val,
          bases_above_E = sum(n_bases[score > E]),
          prop_bases_above_E = bases_above_E / sum(n_bases)) %>% 
-  select(-n_bases, -score, -seqnames, -start, -end, -width, -strand, .drop_ranges = TRUE) %>% 
+  select(-n_bases, -score, -seqnames, -start, -end, -width, -strand, 
+         .drop_ranges = TRUE) %>% 
   dplyr::as_tibble() 
+```
 
-res2 <- tidyr::gather(res, "key", "value", -gene_id, -feature_type) %>% 
+
+4. Plot the results.
+
+* cutoffs displayed on rangnostics plot
+
+```{r rangenostics}
+all_features <- tidyr::gather(res, "key", "value", -gene_id, -feature_type) %>% 
   mutate(var = paste0(feature_type, "_", key)) %>% 
   select(-feature_type, -key) %>% 
   arrange(gene_id) %>% 
   tidyr::spread(var, value)
-```
 
-## Plot the results
 
-```{r}
-highlights <- c("ENSG00000136930.12", 
-                "ENSG00000134884.13", 
-                "ENSG00000102144.13")
-
-hex <- function(data, mapping, ...) {
-  
-  ggplot2::ggplot(data = data, mapping = mapping) + 
-    ggplot2::geom_hex(...) +
-    ggplot2::geom_point(data = filter(data, highlight == TRUE), colour = "red")
-}
-
-res2 %>% 
+all_features %>% 
   mutate(highlight = gene_id %in% highlights) %>%
   select(-gene_id, -exon_E, -intron_E, 
          -exon_feature_length, -intron_feature_length) %>% 
@@ -185,48 +219,54 @@ res2 %>%
                   lower = list(continuous = GGally::ggally_density),
                   upper = "blank") 
 
-# look at modelling the features
-# calculate accross experiments / between groups
-  
+
 ```
 
-Now we can try out some filters...
+5. Decide on cut-offs for features.
 
 ```{r}
 hits <- all_features %>% 
-  group_by(Kit) %>% 
   filter(exon_average > E, intron_average < 6, total_bases_above_E > 5000) %>% 
-  ungroup() %>% 
   group_by(gene_id)
 hits
 ```
 
-And plot the results:
+5. And show the coverage plots:
 
-```{r}
+```{r coverage-plots}
 save_plot <- function(.x, .y) {
-  if (nrow(.x) == 2) {
-    fname <- paste0(.y$gene_id,  "-both-ir.png")
-  } else {
-    fname <- paste0(.y$gene_id, "-", .x$Kit, "-ir.png")
-  }
+  target <- filter(parts_sub, gene_id == !!.y$gene_id)
+  fname <- paste0(target$gene_name, "_coverage_plot.pdf")
   fname <- here::here("figures", fname)
-  p <- parts_sub %>% 
-    filter(gene_id == !!.y$gene_id) %>% 
-    view_coverage(cvg_over_features, ., hline, "Kit")
-  ggplot2::ggsave(fname, p)
+  p <- view_coverage(cvg_over_features, p, hline, "Kit")
+  print(p)
+  ggplot2::ggsave(fname, p, dpi = "retina")
 } 
 
 hline <- dplyr::distinct(all_features, Kit, E)
 
-
 hits %>% 
   dplyr::group_walk(save_plot)
-  
+```
+
+
+
+
+##  IsoformSwitchAnalyzeR analysis
+
+The Bioconductor package `IsoformSwitchAnalyzeR` also allows for the exploration
+of intron retention events using a similar workflow:
+
+1. import isoform quantifications from kallisto/salmon/other program of your choice
+
+```{r isoPrepare}
+library(IsoformSwitchAnalyzeR)
 
 ```
 
-* lagged difference 
-* cutoffs displayed on rangnostics plot
-* look without groupings
-* isoform switch analyzer
+
+2. preparing data structure called a `switchList` by importing annotations
+and design matrix.
+3. Filtering isoforms
+4. Running analysis for isoForm switch events
+
