@@ -1,5 +1,5 @@
 ---
-title: "Exploring intron signal with superintronic"
+title: "Exploring intron signal in RNA-seq data using coverage estimation"
 author: "Stuart Lee, Charity Law"
 date: "`r Sys.Date()`"
 output: 
@@ -21,24 +21,44 @@ knitr::opts_chunk$set(
 suppressPackageStartupMessages(library(plyranges))
 suppressPackageStartupMessages(library(superintronic))
 
+# useful functions
 hex <- function(data, mapping, ...) {
   ggplot2::ggplot(data = data, mapping = mapping) + 
     ggplot2::geom_hex(...) +
-    ggplot2::geom_point(data = filter(data, gene_id %in% gene_paper), colour = "red") +
+    # ggplot2::geom_point(data = filter(data, gene_id %in% gene_paper), colour = "red") +
     ggplot2::scale_fill_viridis_c(direction = -1)
+}
+
+save_plot <- function(.x, .y) {
+  target <- filter(parts_sub, gene_id == !!.y$gene_id)
+  fname <- paste0(target$gene_name, "_coverage_plot.pdf")
+  fname <- here::here("figures", fname)
+  p <- view_coverage(cvg_over_features, target, facets = "Kit")
+  print(p)
+  ggplot2::ggsave(fname, p, dpi = "retina")
+} 
+
+save_plot_isr <- function(.x, .y) {
+  target <- filter(parts, gene_id == !!.y$gene_id)
+  cvg_sub <- join_parts(cvg, target)
+  fname <- paste0(target$gene_name, "_isr_coverage_plot.pdf")
+  fname <- here::here("figures", fname)
+  p <- view_coverage(cvg_sub, target, facets = "Kit")
+  print(p)
+  ggplot2::ggsave(fname, p, dpi = "retina")
 }
 ```
 
 # Introduction
 
-This report looks finding intron retention genes using simple summary statistics and
-visualisation using `superintronic`. We also compare the results to those
+This report looks finding intron retention genes using simple summary 
+statistics and visualisations using `superintronic`. We also compare the results to those
 obtained using `IsoFormSwitchAnalyzeR`.
 
 ## Data
 
 We will use data from 6 samples from the human cell line mixture RNA-seq
-data. There are three biological replicates accross two library prepartion kits,
+data. There are three biological replicates across two library preparation kits,
 a polyA kit and a total RNA kit. The BAM files have been previously aligned
 with subread using the hg20 reference genome. 
 
@@ -141,7 +161,7 @@ cvg_over_features <- join_parts(cvg, parts_sub)
 cvg_over_features
 ```
 
-Now we will compute summaries (rangnostics) for the polyA Kit to detect IR 
+Now we will compute summaries (rangenostics) for the polyA Kit to detect IR 
 genes. This consists of three steps
 
 1. Computing the average log-coverage over all exon/intron features:
@@ -188,8 +208,10 @@ mcols(res) <- cbind(mcols(res), E_val)
 ```
    
    
-3. Compute the avergae number of bases with a 
-   log-coverage score above the E values defined above.
+3. Compute the average number of bases with a 
+   log-coverage score above the E values defined above. We have also computed
+   a smooth between over the intron/exon feature standard deviation against
+   the average for visualisation purposes.
 
 ```{r rangenostics-03}
 rango <- res %>% 
@@ -210,7 +232,15 @@ rango <- res %>%
   ) %>% 
   tidyr::unnest(data, augment) %>% 
   dplyr::select(-dplyr::ends_with("1"), -.sigma)
+```
 
+4. Plot the results.
+
+We get very similar results to a `voom` plot in a standard limma analysis. We
+have also overlaid on the E_mu and E_sigma values as potential cut-offs for
+each feature. 
+
+```{r voom-like-plot}
 # rangenostics feature_average vs feature_sd coloured by n of bases above
 # average raw exon coverage
 ggplot(rango, aes(x = feature_average, 
@@ -224,11 +254,11 @@ ggplot(rango, aes(x = feature_average,
   facet_wrap(~feature_type) 
 ```
 
+We also plot pairs of rangenositcs for each feature in a scatter plot matrix
+(using a hexbin scatter plot). Again we get similar results to the plots
+produced by a DE analysis.
 
-4. Plot the results.
-
-
-```{r rangenostics}
+```{r rangenostics-pairs}
 all_features <- tidyr::gather(rango, "key", "value", 
                               -gene_id, -feature_type, -E_mu, -E_sigma) %>% 
   mutate(var = paste0(feature_type, "_", key)) %>% 
@@ -242,10 +272,11 @@ all_features %>%
   GGally::ggpairs(columns = 2:5, lower = list(continuous = hex))
 ```
 
-5. Decide on cut-offs for features.
+5. Decide on cut-off over each feature. It appears that choosing genes
+with high intron feature standard deviations, and with number of bases above
+E_mu in the 99th percentile discriminates intron retention features well.
 
-
-```{r}
+```{r rangenositcs-hits}
 hits <- all_features %>% 
   filter(exon_feature_average > E_mu, 
          intron_feature_sd > E_sigma, 
@@ -254,23 +285,12 @@ hits <- all_features %>%
 hits
 ```
 
-5. And show the coverage plots:
+6. And show the coverage plots for the `nrow(hits)` genes.
 
-```{r coverage-plots}
-save_plot <- function(.x, .y) {
-  target <- filter(parts_sub, gene_id == !!.y$gene_id)
-  fname <- paste0(target$gene_name, "_coverage_plot.pdf")
-  fname <- here::here("figures", fname)
-  p <- view_coverage(cvg_over_features, target, facets = "Kit")
-  print(p)
-  ggplot2::ggsave(fname, p, dpi = "retina")
-} 
-
+```{r superintronic-coverage-plots}
 hits %>% 
   dplyr::group_walk(save_plot)
 ```
-
-
 
 
 ##  IsoformSwitchAnalyzeR analysis
@@ -286,7 +306,7 @@ replicate in the polyA/total RNA kits. We need to use both here since
 IsoformSwitchAnalzyeR requires biological replicates for testing for
 switching events.
 
-```{r isoPrepare}
+```{r isf-prepare}
 library(IsoformSwitchAnalyzeR)
 
 quants <- importIsoformExpression(
@@ -299,7 +319,7 @@ quants <- importIsoformExpression(
 2. Preparing data structure called a `switchList` by importing annotations
 and design matrix.
 
-```{r}
+```{r isf-import}
 # use a simplified version of the design
 design_isf <- data.frame(sampleID = colnames(quants$abundance[,-1])) %>% 
   mutate(condition =  rep(c("polyA", "total-RNA"), 3),
@@ -326,7 +346,7 @@ Next we prefilter, the isoforms using roughly the same filters we used
 in the superintronic analysis above. To speed things up we could further
 specify a gene expression filter, but we have left that out for now.
 
-```{r}
+```{r isf-filtered, cahce = TRUE, dependson=isf}
 isf_filtered <- preFilter(isf,
                           acceptedGeneBiotype = "protein_coding",
                           removeSingleIsoformGenes = TRUE,
@@ -340,7 +360,7 @@ isf_filtered
 4. Searching for intron retention events
 
 First we are required to run DEXSeq to test for isoform switching (
-this does all pairwise comparisions between conditions, which slows things
+this does all pairwise comparisons between conditions, which slows things
 down quite a bit.) and between the two kits. We have used quite a small
 alpha since DEXSeq seems quite liberal...
 
@@ -355,7 +375,7 @@ isf_analysed
 
 Now we can analyse intron retention events from one kit relative to another:
 
-```{r}
+```{r isf-intron-retention, cache=TRUE}
 # this takes quite a while to compute...
 isf_analysed <- analyzeIntronRetention(isf_analysed)
 isf_analysed <- analyzeSwitchConsequences(isf_analysed, "intron_retention")
@@ -387,17 +407,7 @@ is_res
 We can also look at the coverage plots for these genes (we will choose
 the top 20 genes):
 
-```{r}
-save_plot_isr <- function(.x, .y) {
-  target <- filter(parts, gene_id == !!.y$gene_id)
-  cvg_sub <- join_parts(cvg, target)
-  fname <- paste0(target$gene_name, "_isr_coverage_plot.pdf")
-  fname <- here::here("figures", fname)
-  p <- view_coverage(cvg_sub, target, facets = "Kit")
-  print(p)
-  ggplot2::ggsave(fname, p, dpi = "retina")
-}
-
+```{r isf-coverage-plots}
 is_res %>% 
   filter(Rank < 40) %>%
   group_by(gene_id) %>% 
@@ -405,13 +415,16 @@ is_res %>%
 ```
 
 
-
-Comparing to the previous analysis withs superintronic, there is no
-overlap between the two methods. (Of the genes in the isf analysis, only
+Comparing to the previous analysis with superintronic, there is no
+overlap between the two methods. (Of the genes in the IsoformSwitchAnalyzeR analysis, only
 136 were kept by the filters in the superintronic, none of these were
-selected by our rangenostics).
+selected by our rangenostics). The comparison to superintronic is not
+quite the same since this method is based on isoforms within genes between 
+kits rather
+than our summaries over genes within just the polyA kit, 
+however there still seems to be a lot of intron retention events by IsoformSwitchAnalyzeR.
 
-```{r}
+```{r overlaps}
 is_res <- is_res %>%
   dplyr::left_join(all_features %>% 
                      mutate(selected = gene_id %in% hits$gene_id) %>% 
