@@ -214,10 +214,8 @@ rango <- res %>%
 # rangenostics feature_average vs feature_sd coloured by n of bases above
 # average raw exon coverage
 ggplot(rango, aes(x = feature_average, 
-                  y = feature_sd, 
-                  colour = log2(n_bases_E_raw +0.5))) +
+                  y = feature_sd) +
   geom_point() +
-  scale_color_viridis_c() +
   geom_line(aes(y = .fitted), colour = "blue") +
   geom_vline(aes(xintercept = E_mu), 
              data  = dplyr::distinct(rango, feature_type, E_mu)) +
