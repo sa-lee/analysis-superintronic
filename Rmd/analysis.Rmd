@@ -3,7 +3,7 @@ title: "Exploring intron signal in RNA-seq data using coverage estimation"
 author: "Stuart Lee, Charity Law"
 date: "`r Sys.Date()`"
 output: 
-  rmarkdown::html_vignette:
+  bookdown::html_document2:
     toc: true
 ---
 
@@ -13,7 +13,7 @@ knitr::opts_chunk$set(
                       comment = "#>", 
                       message = FALSE,
                       warning = FALSE,
-                      fig.path = here::here("figures/"),
+                      fig.path = here::here("img/"),
                       cache.path = here::here("cache/")
                       )
 
@@ -32,7 +32,7 @@ hex <- function(data, mapping, ...) {
 save_plot <- function(.x, .y) {
   target <- filter(parts_sub, gene_id == !!.y$gene_id)
   fname <- paste0(target$gene_name, "_coverage_plot.pdf")
-  fname <- here::here("figures", fname)
+  fname <- here::here("img", fname)
   p <- view_coverage(cvg_over_features, target, facets = "Kit")
   print(p)
   ggplot2::ggsave(fname, p, dpi = "retina")
@@ -42,7 +42,7 @@ save_plot_isr <- function(.x, .y) {
   target <- filter(parts, gene_id == !!.y$gene_id)
   cvg_sub <- join_parts(cvg, target)
   fname <- paste0(target$gene_name, "_isr_coverage_plot.pdf")
-  fname <- here::here("figures", fname)
+  fname <- here::here("img", fname)
   p <- view_coverage(cvg_sub, target, facets = "Kit")
   print(p)
   ggplot2::ggsave(fname, p, dpi = "retina")

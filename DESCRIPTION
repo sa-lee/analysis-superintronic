@@ -11,6 +11,13 @@ Imports:
     IsoformSwitchAnalyzeR,
     GenomeInfoDb,
     S4Vectors,
-    rhdf5
+    rhdf5,
+    GGally,
+    here,
+    dplyr,
+    ggplot2,
+    bookdown,
+    rmarkdown
 Remotes:
     sa-lee/superintronic
+    

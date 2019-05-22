@@ -1,2 +1,7 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
+fastq/
+cache/
+*.log
+data/
+data-raw/
