@@ -1,8 +1,10 @@
 ---
 title: "IsoformSwitchAnalzyeR analysis"
-author: "Stuart Lee"
-date: "05/06/2019"
-output: html_document
+author: "Stuart Lee, Charity Law"
+date: "`r Sys.Date()`"
+output: 
+  bookdown::html_document2:
+    toc: true
 ---
 
 ```{r setup, include=FALSE}
