@@ -119,6 +119,7 @@ cvg_by_features <- cvg_over_features %>%
 E_vals <- cvg_by_features %>% 
   summarise(mn = Hmisc::wtd.mean(log_score, width),
             sd = sqrt(Hmisc::wtd.var(log_score, width)),
+            raw_mn = Hmisc::wtd.mean(score, width),
             score = score,
             n_bases = width,
             start = min(start),
@@ -140,7 +141,7 @@ lumpy <- E_vals %>%
   summarise(
     E_mu = mean(mn),
     E_sd = mean(sd),
-    E_raw = mean(sum(score*n_bases) / n_bases)
+    E_raw = mean(raw_mn)
 )
 
 lumpy 

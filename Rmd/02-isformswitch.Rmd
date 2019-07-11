@@ -28,6 +28,7 @@ save_plot_isr <- function(.x, .y) {
 }
 
 # external inputs
+parts <- readr::read_rds(parts, here::here("data", "parts.rds"))
 cvg <- readr::read_rds(here::here("data", "cvg.rds"))
 all_features <- readr::read_rds(here::here("data", "superintronic-features.rds"))
 hits <- readr::read_rds(here::here("data", "superintronic-hits.rds"))
