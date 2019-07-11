@@ -19,7 +19,9 @@ samples <- read.table(
   stringsAsFactors = FALSE
   ) %>% 
   as_tibble() %>% 
-  filter(Mixture == 0, Replicate %in% c("R1", "R2", "R3")) %>% 
+  filter(Mixture %in% c(0, 100), 
+         Replicate %in% c("R1", "R2", "R3"), 
+         Kit == "mRNA") %>% 
   mutate(fq_target = sub("_R1.bam", "", basename(File))) %>%
   mutate(fq_target = sub("\\.", "-", fq_target)) %>% 
   mutate(output = paste0(sub("\\.", "-", Sample), "_", Kit)) %>% 
@@ -36,7 +38,7 @@ system("module load kallisto/0.44.0")
 
 command <- "kallisto quant"
 args <- c("-i", index, "-o",  NA, 
-          "--single", "-l", 200, "-s", 20)
+          "--single", "-l", 175, "-s", 20)
 
 # loop over each sample
 for (i in seq_len(nrow(samples))) {
