@@ -21,27 +21,13 @@ knitr::opts_chunk$set(
 suppressPackageStartupMessages(library(plyranges))
 suppressPackageStartupMessages(library(superintronic))
 
-# useful functions
+# use hexbinning for pairs plot
 hex <- function(data, mapping, ...) {
   ggplot2::ggplot(data = data, mapping = mapping) + 
     ggplot2::geom_hex(...) +
     # ggplot2::geom_point(data = filter(data, gene_id %in% gene_paper), colour = "red") +
     ggplot2::scale_fill_viridis_c(direction = -1)
 }
-
-save_plot <- function(.x, .y) {
-  target <- filter(parts_sub, gene_id == !!.y$gene_id)
-  
-  fname <- paste0(target$gene_name, "_coverage_plot.pdf")
-  fname <- here::here("img", fname)
-  p <- view_coverage(cvg_over_features, target, facets = "CellLine")
-  print(p)
-  ggplot2::ggsave(fname, p, dpi = "retina")
-} 
-
-
-skip <- !file.exists(here::here("data", "cvg_over_features.rds"))
-
 ```
 
 # Introduction
@@ -103,7 +89,7 @@ corresponding to the properties of the intron/exon.
 cvg_over_features <- readRDS(here::here("data", "parts-coverage.rds"))
 ```
 
-Now we will compute summaries (rangenostics) for each cell line and kit to detect IR 
+Now we will compute summaries for each cell line and kit to detect IR 
 genes. This consists of three steps
 
 1. Computing the average log-coverage over all exon/intron features:
@@ -218,9 +204,9 @@ rango %>%
 
 ```
 
-We also plot pairs of rangenositcs for each feature in a scatter plot matrix
+We also plot pairs of summary values for each feature in a scatter plot matrix
 (using a hexbin scatter plot). Again we get similar results to the plots
-produced by a DE analysis.
+produced by a DE analysis from InDeX.
 
 ```{r rangenostics-pairs}
 all_features <- tidyr::gather(rango, "key", "value", 
@@ -267,9 +253,9 @@ hits <- all_features %>%
 dplyr::count(hits)
 ```
 
-6. We can also look at overlaps between sets:
+6. We can also look at overlaps between sets using an UpSet plot:
 
-```{r}
+```{r, echo  = FALSE}
 sets <- hits %>% 
   dplyr::distinct(gene_id) %>%
   arrange(gene_id) %>% 
@@ -281,20 +267,118 @@ sets <- hits %>%
 
 sets <- as.data.frame(sets)
 library(UpSetR)
-pl <- upset(sets)
-ggsave(here::here("img", "olaps-sets.png"))
+pdf(here::here("img", "olaps-superintronic-hits.pdf"))
+upset(sets)
+dev.off()
 ```
 
 ```{r all-features-out, include = FALSE}
-readr::write_rds(all_features, here::here("data", "superintronic-features.rds"))
-readr::write_rds(hits, here::here("data", "superintronic-hits.rds"))
+saveRDS(all_features, here::here("data", "superintronic-features.rds"))
+saveRDS(hits, here::here("data", "superintronic-hits.rds"))
 ```
 
-6. And show the coverage plots for the `nrow(hits)` genes.
+6. And show the coverage plots for the `nrow(sets)` genes.
 
-```{r superintronic-coverage-plots}
-hits %>% 
-  dplyr::group_walk(save_plot)
+```{r superintronic-coverage-plots, include = FALSE}
+coverage_plot <- function(.y) {
+  target <- filter(parts_sub, gene_id == !!.y$gene_id)
+  cvg_rng <- filter_by_overlaps(cvg_over_features, target) %>% 
+    mutate(strand = strand(target),
+           var = paste0("Kit: ", Kit, " Cellline: ", CellLine))
+  p <- view_coverage(cvg_rng, 
+                     score = log_score, 
+                     colour = feature_type,  
+                     facets = dplyr::vars(var)) +
+    ylim(0, NA) +
+    guides(colour = FALSE) +
+    scale_color_brewer(palette = "Dark2") +
+    labs(subtitle = paste("Coverage over",
+                           target$gene_name, "-", as.character(target)),
+         y = "average log coverage"
+    ) +
+    theme_bw() +
+    theme(axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(),
+          strip.text = element_text(hjust = 0, size = 8),
+          strip.background = element_blank()) +
+    expand_limits(y = 0)
+  
+  segments <- superintronic:::flatten_parts(target)
+  track <- view_segments(segments, color = feature_type) +
+    theme(axis.text.x = element_text(size = 8))
+
+  patchwork::wrap_plots(p, track, 
+                        ncol = 1, 
+                        heights = c(4, 0.25))
+  
+} 
+
+# look at combinations and save those coverage plots
+# this is really clunky code but gets the job done
+sets <- sets %>% 
+  mutate(combo = 
+           `HCC287 polyA` + `HCC287 total-RNA` +  `NCI-H1975 polyA` + `NCI-H1975 total-RNA` ) 
+
+all_sets <- dplyr::filter(sets, combo == 4)
+
+for (gene in seq_len(nrow(all_sets))) {
+  track_plot <- coverage_plot(all_sets[gene,])
+  ggsave(here::here("img", 
+                    paste0("all-sets-hit-", all_sets[gene, "gene_id"], ".pdf")),
+         plot = track_plot
+  )
+}
+
+three_sets <- dplyr::filter(sets, combo == 3)
+
+for (gene in seq_len(nrow(three_sets))) {
+  input <- three_sets[gene,]
+  cols <- names(
+    Filter(function(x) length(x) ==  1, 
+           lapply(input[, 2:5], function(x) which(x == 1))
+           )
+  )
+  cols <- paste(gsub(" ", "-", cols), collapse = "_")
+  track_plot <- coverage_plot(input)
+  ggsave(here::here("img", 
+                    paste0("three-sets-hit-", cols, "-", input$gene_id, ".pdf")),
+         plot = track_plot
+  )
+}
+
+two_sets <- dplyr::filter(sets, combo == 2)
+
+for (gene in seq_len(nrow(two_sets))) {
+  input <- two_sets[gene,]
+  cols <- names(
+    Filter(function(x) length(x) ==  1, 
+           lapply(input[, 2:5], function(x) which(x == 1))
+           )
+  )
+  cols <- paste(gsub(" ", "-", cols), collapse = "_")
+  track_plot <- coverage_plot(input)
+  ggsave(here::here("img", 
+                    paste0("two-sets-hit-", cols, "-", input$gene_id, ".pdf")),
+         plot = track_plot
+  )
+}
+
+one_sets <- dplyr::filter(sets, combo == 1)
+
+for (gene in seq_len(nrow(one_sets))) {
+  input <- one_sets[gene,]
+  cols <- names(
+    Filter(function(x) length(x) ==  1, 
+           lapply(input[, 2:5], function(x) which(x == 1))
+           )
+  )
+  cols <- paste(gsub(" ", "-", cols), collapse = "_")
+  track_plot <- coverage_plot(input)
+  ggsave(here::here("img", 
+                    paste0("one-sets-hit-", cols, "-", input$gene_id, ".pdf")),
+         plot = track_plot
+  )
+}
 ```
 
 
