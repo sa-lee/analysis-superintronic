@@ -1,5 +1,5 @@
 ---
-title: "IsoformSwitchAnalzyeR analysis"
+title: "IsoformSwitchAnalzyeR and IRFinder analysis"
 author: "Stuart Lee, Charity Law"
 date: "`r Sys.Date()`"
 output: 
@@ -17,21 +17,61 @@ knitr::opts_chunk$set(
                       cache.path = here::here("cache/")
                       )
 
-save_plot_isr <- function(.x, .y) {
+coverage_plot <- function(.y) {
   target <- filter(parts, gene_id == !!.y$gene_id)
-  cvg_sub <- join_parts(cvg, target)
-  fname <- paste0(target$gene_name, "_isr_coverage_plot.pdf")
-  fname <- here::here("img", fname)
-  p <- view_coverage(cvg_sub, target, facets = "Kit")
-  print(p)
-  ggplot2::ggsave(fname, p, dpi = "retina")
-}
+  
+  # set up parts
+  cvg_rng <- as(lapply(cvg, function(x) join_parts(x, target)), "GRangesList")
+  md <- DataFrame(Sample = Rle(names(cvg_rng), lengths(cvg_rng)),
+                  CellLine = Rle(design$CellLine, lengths(cvg_rng)),
+                  Kit = Rle(as.factor(design$Kit), lengths(cvg_rng)))
+  cvg_rng <- unlist(cvg_rng, use.names = FALSE)
+  mcols(cvg_rng) <- cbind(mcols(cvg_rng), md)
+  cvg_rng <- cvg_rng %>% 
+        mutate(log_score = log2(score + 0.5),
+               strand = strand(target),
+               var = paste0("Kit: ", Kit, " Cellline: ", CellLine))
+  
+  
+  p <- view_coverage(cvg_rng, 
+                     score = log_score, 
+                     colour = feature_type,  
+                     facets = dplyr::vars(var)) +
+    ylim(0, NA) +
+    guides(colour = FALSE) +
+    scale_color_brewer(palette = "Dark2") +
+    labs(subtitle = paste("Coverage over", target$gene_name),
+         y = "Log coverage"
+    ) +
+    theme_bw() +
+    theme(axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(),
+          strip.text = element_text(hjust = 0, size = 8),
+          strip.background = element_blank()) +
+    expand_limits(y = 0)
+  
+  segments <- superintronic:::flatten_parts(target)
+  track <- view_segments(segments, color = feature_type) +
+    theme(axis.text.x = element_text(size = 8))
+
+  patchwork::wrap_plots(p, track, 
+                        ncol = 1, 
+                        heights = c(2, 0.25))
+  
+} 
+library(plyranges)
+library(superintronic)
 
 # external inputs
-parts <- readr::read_rds(parts, here::here("data", "parts.rds"))
-cvg <- readr::read_rds(here::here("data", "cvg.rds"))
-all_features <- readr::read_rds(here::here("data", "superintronic-features.rds"))
-hits <- readr::read_rds(here::here("data", "superintronic-hits.rds"))
+design <- readRDS(here::here("data", "design.rds"))
+parts <- readRDS(here::here("data", "complete-annotation.rds"))
+cvg <- readRDS(here::here("data", "complete-coverage.rds"))
+all_features <- readRDS(here::here("data", "superintronic-features.rds"))
+hits <- readRDS(here::here("data", "superintronic-hits.rds")) 
+
+# update for relevant samples
+design <- subset(design, Kit == "polyA")
+cvg <- cvg[design$Sample]
 ```
 
 ##  IsoformSwitchAnalyzeR analysis
@@ -42,8 +82,9 @@ of intron retention events using a similar workflow:
 1. import isoform quantifications from kallisto/salmon/other program of your choice.
 
 We used kallisto quant on single read mode with an average fragment
-size of 200 and a standard deviation of 20, on all fastq files for each
-replicate in the polyA/total RNA kits. We need to use both here since 
+size of 175 and a standard deviation of 20, on all fastq files for each
+replicate in the polyA kits for each of our cellines. 
+We need to use both here since 
 IsoformSwitchAnalzyeR requires biological replicates for testing for
 switching events.
 
@@ -63,9 +104,7 @@ and design matrix.
 ```{r isf-import}
 # use a simplified version of the design
 design_isf <- data.frame(sampleID = colnames(quants$abundance[,-1])) %>% 
-  mutate(condition =  rep(c("polyA", "total-RNA"), 3),
-         replicate = rep(c("R1", "R2", "R3"), each = 2)
-  )
+  mutate(condition =  design$CellLine)
 
 isf <- importRdata(
   isoformCountMatrix = quants$counts,
@@ -109,7 +148,7 @@ alpha since DEXSeq seems quite liberal...
 isf_analysed <- isoformSwitchTestDEXSeq(isf_filtered, 
                                         reduceToSwitchingGenes = TRUE,
                                         alpha = 0.01,
-                                        dIFcutoff = 0.15)
+                                        dIFcutoff = 0.1)
 isf_analysed
 ```
 
@@ -132,8 +171,8 @@ isf_analysed$switchConsequence %>%
 And the results can be summarised at the gene level and compared to the 
 superintronic analysis. 
 
-At the gene level there are around 502 genes declared significant
-at 0.01 fdr cut-off between the polyA and total-RNA kits that
+At the gene level there are around 210 genes declared significant
+at 0.01 fdr cut-off between the celllines kits that
 are filtered for intron retention events.
 
 ```{r top-table}
@@ -146,30 +185,77 @@ is_res
 ```
 
 We can also look at the coverage plots for these genes (we will choose
-the top 20 genes):
+the top 10 genes):
 
 ```{r isf-coverage-plots}
-is_res %>% 
-  filter(Rank < 40) %>%
-  group_by(gene_id) %>% 
-  dplyr::group_walk(save_plot_isr)
+top10 <- is_res %>% 
+  filter(Rank < 10)
+
+for (i in seq_len(nrow(top10))) {
+  input <- top10[i,]
+  cplot <- coverage_plot(input)
+  fname <- here::here("img", "isa-cov", 
+                      paste0(input$gene_id, "-rank-", input$Rank, ".pdf"))
+  ggsave(fname, cplot)
+}
 ```
 
 
-Comparing to the previous analysis with superintronic, there is no
-overlap between the two methods. (Of the genes in the IsoformSwitchAnalyzeR analysis, only
-136 were kept by the filters in the superintronic, none of these were
-selected by our rangenostics). The comparison to superintronic is not
+Comparing to the previous analysis with superintronic, there is one gene
+overlap between the two methods. The comparison to superintronic is not
 quite the same since this method is based on isoforms within genes between 
-kits rather
-than our summaries over genes within just the polyA kit, 
-however there still seems to be a lot of intron retention events by IsoformSwitchAnalyzeR.
+celllines rather
+than our summaries over genes within each cellline separately.
 
 ```{r overlaps}
-is_res <- is_res %>%
-  dplyr::left_join(all_features %>% 
-                     mutate(selected = gene_id %in% hits$gene_id) %>% 
-                     dplyr::select(gene_id, selected))
+# only polyA results
+polyA_sets <- hits %>%
+  filter(Kit == "polyA") %>% 
+  dplyr::distinct(gene_id) %>%
+  arrange(gene_id) %>% 
+  mutate(value = 1, 
+         var = paste0("superintronic_", gsub("-", "", CellLine),"_", Kit)) %>% 
+  ungroup() %>%  
+  plyranges::select(gene_id, var, value) %>% 
+  tidyr::spread(var, value) %>% 
+  dplyr::mutate_at(2:3, .funs = ~ dplyr::if_else(is.na(.), 0L, 1L)) 
 
-dplyr::count(is_res, selected)
+
+all_sets <- is_res %>%
+  mutate(isa_set = 1L) %>% 
+  select(gene_id, isa_set, gene_name, gene_switch_q_value, rank = Rank) %>% 
+  dplyr::full_join(polyA_sets) %>% 
+  dplyr::mutate_at(dplyr::vars(isa_set, 
+                               dplyr::starts_with("superintronic")), 
+                   .funs = ~ dplyr::if_else(is.na(.), 0L, .)) 
+  
+library(UpSetR)
+plot_sets <- all_sets %>% 
+  select(`IsoformSwitchAnalyzeR` = isa_set, 
+         dplyr::starts_with("superintronic")) %>% 
+  as.data.frame()
+pdf(here::here("img", "olaps-superintronic-isa.pdf"))
+upset(plot_sets)
+dev.off()
+```
+
+
+
+### Comparison to IRFinder
+
+
+```{r, echo = FALSE}
+targets <- filter(parts, 
+                  gene_name %in% c("NBEAL2", "HNRNPL", "HLA-B")
+) %>% 
+  select(gene_id) %>% 
+  as.data.frame()
+
+fig6_plots <- lapply(seq_len(nrow(targets)),
+                function(.x) coverage_plot(targets[.x,]))
+
+fig6 <- patchwork::wrap_plots(fig6_plots, ncol = 1, guides = "keep")
+
+ggsave(here::here("figures/Fig6.pdf"), fig6, height = 7, width = 12)
+
 ```

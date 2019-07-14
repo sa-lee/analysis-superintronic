@@ -259,11 +259,11 @@ dplyr::count(hits)
 sets <- hits %>% 
   dplyr::distinct(gene_id) %>%
   arrange(gene_id) %>% 
-  mutate(value = 1, var = paste(CellLine, Kit)) %>% 
+  mutate(value = 1L, var = paste(CellLine, Kit)) %>% 
   ungroup() %>%  
   plyranges::select(gene_id, var, value) %>% 
   tidyr::spread(var, value) %>% 
-  dplyr::mutate_at(2:5, .funs = ~ dplyr::if_else(is.na(.), 0L, 1L)) 
+  dplyr::mutate_at(2:5, .funs = ~ dplyr::if_else(is.na(.), 0L, .)) 
 
 sets <- as.data.frame(sets)
 library(UpSetR)
