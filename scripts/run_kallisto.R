@@ -8,7 +8,7 @@ find_files <- function(x, path) {
 }
 
 # fastq path
-fastq_path <- file.path("fastq")
+fastq_path <- file.path(here::here("data-raw", "fastq"))
 # index
 index <- here::here("data", "transcripts.idx")
 
