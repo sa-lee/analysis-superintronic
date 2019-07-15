@@ -1,14 +1,15 @@
 ---
-title: "Overlapping hits between superintronic, ISA and IRfinder"
+title: "Overlapping hits between superintronic, INdEX, ISA and IRfinder"
 author: "Stuart Lee"
-date: "`r Sys.Date()"
+date: "`r Sys.Date()`"
 output: 
   bookdown::html_document2:
     toc: true
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE,
+                      fig.path = here::here("img/"))
 library(dplyr)
 parts <- readRDS(here::here("data", "complete-annotation.rds"))
 
@@ -45,20 +46,20 @@ ir_finder_glm <- readr::read_tsv(here::here("data", "IRfinder_GLM_hits.tsv"),
   select(gene_name, gene_id, region, adj_pval)
 
 parts_tbl <- parts %>% 
-  select(gene_id, gene_name, .drop_ranges = TRUE) %>% 
+  plyranges::select(gene_id, gene_name, .drop_ranges = TRUE) %>% 
   as_tibble()
 ```
 
-## Introduction
+# Introduction
 
 Here we look at the overlap between the following methods:
 
-* superintronic run on the polyA kit in each of the HCC287 and NCIH1975 celllines
+* superintronic run on all kits in each of the HCC287 and NCIH1975 celllines
 ```{r si-sets}
 # only polyA results
 polyA_sets <- hits %>%
   filter(Kit == "polyA") %>% 
-  dplyr::distinct(gene_id) %>%
+  distinct(gene_id) %>%
   arrange(gene_id) %>% 
   mutate(value = 1, 
          var = paste0("superintronic:", gsub("-", "", CellLine),"_", Kit)) %>% 
@@ -67,7 +68,20 @@ polyA_sets <- hits %>%
   tidyr::spread(var, value) %>% 
   dplyr::mutate_at(2:3, .funs = ~ dplyr::if_else(is.na(.), 0L, 1L)) %>% 
   left_join(parts_tbl)
-polyA_sets
+
+totalRNA_sets <- hits %>%
+  filter(Kit == "total-RNA") %>% 
+  distinct(gene_id) %>%
+  arrange(gene_id) %>% 
+  mutate(value = 1, 
+         var = paste0("superintronic:", gsub("-", "", CellLine),"_", Kit)) %>% 
+  ungroup() %>%  
+  plyranges::select(gene_id, var, value) %>% 
+  tidyr::spread(var, value) %>% 
+  dplyr::mutate_at(2:3, .funs = ~ dplyr::if_else(is.na(.), 0L, 1L)) %>% 
+  left_join(parts_tbl)
+
+totalRNA_sets
 ```
 
 * IRfinder using
@@ -120,36 +134,139 @@ isa_sets
 * index results 
 
 ```{r}
+library(INdEX)
+exon <- readRDS(system.file("extdata/exon_dge.Rds", package = "INdEX"))
+intron <- readRDS(system.file("extdata/intron_dge.Rds", package = "INdEX"))
+group <- readRDS(system.file("extdata/group.Rds", package = "INdEX"))
 
+x <- index_analysis(exon, intron, group)
+
+index_res <- x$tops$intron %>% 
+  filter(adj.P.Val < 0.01) %>% 
+  select(gene_id = GeneID, index_pval = adj.P.Val, logfc = logFC) %>% 
+  mutate(`INdEX` = 1L) %>% 
+  as_tibble()
+
+index_res
 ```
 
 
 For the methods that provide a statistical test (not superintronic),
 we have taken the genes with a differential intronic region at an FDR of 0.05. 
 
-
 Note that these comparisons are not quite fair since the gene sets selected
 by each method after filtering are slighty different. Nonetheless we can
 visualise the overlap using an UpSet plot. 
 
 
-```{r}
+# INdEX sets overlapping total RNA comparisons
 
-all_sets <- isa_sets %>% 
+All hits discovered by superintronic except for 19 genes are 
+obtained by the INdEX analysis. 
+
+```{r index_olap}
+library(UpSetR)
+dex_set <- index_res %>% 
+  full_join(totalRNA_sets) %>% 
+  mutate_at(vars(INdEX, starts_with("superintronic")), 
+            .funs = ~ if_else(is.na(.), 0L, .)) 
+
+upset(as.data.frame(dex_set))
+```
+
+How many genes in DEList overlap with HCC287 total RNA = 13 
+How many genes in DEList overlap with NCIH1975 total RNA = 16
+How many genes overlap between the overlapping genes = 12.  
+
+If we look at the direction of the logFC  when there is overlap, the
+superintronic results are concordant (the design matrix has contrasts where
+up is:
+
+```{r}
+dex_set %>% 
+  count(`superintronic:HCC287_total-RNA`, 
+        `superintronic:NCIH1975_total-RNA`, 
+        sign(logfc)) %>% 
+  filter(`superintronic:HCC287_total-RNA` != 0 | 
+           `superintronic:NCIH1975_total-RNA` != 0)
+```
+
+
+# Compare IRfinder and ISA
+
+superintronic detects genes with IR (IR-like profiles). 
+If a gene is detected in Group A and not B, we can loosely say that it has differential IR (DIR) in Group A and B. Similarly for Group B.  
+ 
+Technically, a gene can be detected with IR in both Group A and B, but at different levels thus DIR – these genes are commonly detected in Group A and B, and are DE (see above) 
+
+
+```{r ir_olaps}
+ir_sets <- isa_sets %>% 
   full_join(polyA_sets) %>% 
   full_join(irf_ac) %>% 
-  full_join(irf_glm) %>% 
-  mutate_at(vars(starts_with("Isoform"), 
+  full_join(irf_glm) %>%
+  mutate_at(vars( 
+                 starts_with("Isoform"), 
                  starts_with("superintronic"),
                  starts_with("IRFinder")), 
             .funs = ~ if_else(is.na(.), 0L, .)) 
   
-library(UpSetR)
-plot_sets <- all_sets %>% 
-  select(gene_id, starts_with("Isoform"), 
-                 starts_with("superintronic"),
-                 starts_with("IRFinder"))
-pdf(here::here("img", "olaps-all-methods.pdf"))
+plot_sets <- ir_sets %>% 
+  select(gene_id,
+         starts_with("Isoform"), 
+         starts_with("superintronic"),
+         starts_with("IRFinder"))
 upset(as.data.frame(plot_sets))
-dev.off()
+```
+
+How many unique genes to HCC287 poly(A) overlap with IRFinder?
+
+0 from AC test; 8 from GLM test
+
+How many unique genes to NCIH1975 poly(A) overlap with IRFinder?
+
+0 from AC test; 11 from GLM test
+
+How many unique genes to HCC287 poly(A) overlap with ISA?
+0
+
+
+How many unique genes to NCIH1975 poly(A) overlap with ISA?
+0
+
+Are there any common genes to both polyA celllines, that are also DE in intron counts (any category), that overlap with IRFinder? Yes, see below, there are three genes.
+
+```{r de_intron_sets}
+de_sets <- index_res %>% 
+  full_join(polyA_sets) %>% 
+  full_join(irf_glm) %>% 
+  mutate_at(vars(INdEX, 
+                 starts_with("superintronic"),
+                 starts_with("IRFinder")), 
+            .funs = ~ if_else(is.na(.), 0L, .)) 
+
+de_sets %>%
+  select(gene_id, INdEX, starts_with("superintronic"), starts_with("IRFinder")) %>% 
+  as.data.frame() %>% 
+  upset()
+```
+
+Are there any common genes to both poly(A) celllines, 
+that are also DE in intron counts (any category), that overlap with ISA? No. 
+
+
+# Comparing libraries
+
+Results are mostly stable accross libraries.
+
+```{r library-olaps}
+libraries <- totalRNA_sets %>% 
+  full_join(polyA_sets) %>% 
+    mutate_at(vars(starts_with("superintronic")),
+            .funs = ~ if_else(is.na(.), 0L, .))
+
+libraries %>% 
+  select(gene_id, starts_with("superintronic")) %>% 
+  as.data.frame() %>% 
+  upset()
 ```
