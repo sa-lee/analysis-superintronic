@@ -1,0 +1,155 @@
+---
+title: "Overlapping hits between superintronic, ISA and IRfinder"
+author: "Stuart Lee"
+date: "`r Sys.Date()"
+output: 
+  bookdown::html_document2:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+parts <- readRDS(here::here("data", "complete-annotation.rds"))
+
+hits <- readRDS(here::here("data", "superintronic-hits.rds"))
+isa_hits <- readRDS(here::here("data", "isa_hits.rds"))
+ir_finder_ac <- readr::read_tsv(here::here("data", "IRfinder_AC_hits.tsv"), 
+                                skip = 8,
+                                col_types = c("Chr" = "c", 
+                                              "Start" = "i", 
+                                              "End" = "i")) %>% 
+  rename_all(.funs = ~stringr::str_replace_all(stringr::str_to_lower(.), "-|\\/", "_")) %>% 
+  filter(p_diff < 33) %>% 
+  mutate(splitter = stringr::str_split(intron_genename_geneid,  "\\/"),
+         gene_name = purrr::map_chr(splitter, ~.[[1]]),
+         gene_id = purrr::map_chr(splitter, ~.[[2]])
+         ) %>% 
+  select(chr, start, end, gene_id, gene_name, p_diff)
+
+ir_finder_glm <- readr::read_tsv(here::here("data", "IRfinder_GLM_hits.tsv"),
+                                 skip = 1,
+                                 col_names = c("id",
+                                               "base_mean",
+                                               "logFC",
+                                               "logFC_se",
+                                               "stat",
+                                               "pval",
+                                               "adj_pval")) %>% 
+    filter(adj_pval < 0.05) %>% 
+    mutate(splitter = stringr::str_split(id,  "\\/"),
+         gene_name = purrr::map_chr(splitter, ~.[[1]]),
+         gene_id = purrr::map_chr(splitter, ~.[[2]]),
+         region = stringr::str_replace_all(purrr::map_chr(splitter, ~.[[4]]), " ", ""),
+    ) %>% 
+  select(gene_name, gene_id, region, adj_pval)
+
+parts_tbl <- parts %>% 
+  select(gene_id, gene_name, .drop_ranges = TRUE) %>% 
+  as_tibble()
+```
+
+## Introduction
+
+Here we look at the overlap between the following methods:
+
+* superintronic run on the polyA kit in each of the HCC287 and NCIH1975 celllines
+```{r si-sets}
+# only polyA results
+polyA_sets <- hits %>%
+  filter(Kit == "polyA") %>% 
+  dplyr::distinct(gene_id) %>%
+  arrange(gene_id) %>% 
+  mutate(value = 1, 
+         var = paste0("superintronic:", gsub("-", "", CellLine),"_", Kit)) %>% 
+  ungroup() %>%  
+  plyranges::select(gene_id, var, value) %>% 
+  tidyr::spread(var, value) %>% 
+  dplyr::mutate_at(2:3, .funs = ~ dplyr::if_else(is.na(.), 0L, 1L)) %>% 
+  left_join(parts_tbl)
+polyA_sets
+```
+
+* IRfinder using
+  * the Audic and Claverie test
+```{r}
+irf_ac <- ir_finder_ac %>% 
+  left_join(parts_tbl, by = "gene_name") %>% 
+  select(gene_id = gene_id.y, gene_name, adj_pval = p_diff) %>% 
+  mutate(`IRFinder_AC` = 1L)
+```
+  
+  * GLM test (one gene is dropped as it's no longer present in hg38 annotation)
+```{r}
+irf_glm <- ir_finder_glm %>% 
+  group_by(gene_name, gene_id) %>% 
+  tidyr::nest() %>% 
+  left_join(parts_tbl, by = "gene_name") %>% 
+  left_join(parts_tbl %>% 
+              mutate(gene_id2 = stringr::str_replace(gene_id, "\\.[1-9]{1,}", "")), 
+            by = c("gene_id.x" = "gene_id2")) %>% 
+  group_by(gene_name.x) %>% 
+  mutate(canon_gene_id = list(unique(c(gene_id, gene_id.y))),
+         canon_gene_id = lapply(canon_gene_id, function(x) {
+           if (any(!is.na(x))) return(x[!is.na(x)])
+           return(NA_character_)
+         }),
+         canon_gene_id = as.character(unlist(canon_gene_id))) %>% 
+  ungroup() %>% 
+  select(gene_name = gene_name.y, gene_id = canon_gene_id, data) %>% 
+  filter(!is.na(gene_id)) %>% 
+  mutate(`IRFinder_GLM` = 1L)
+
+irf_glm
+```
+  
+* IsoformSwitchAnalyzeR using the DEXSeq test
+
+```{r}
+isa_sets <- isa_hits %>%
+  mutate(`IsoformSwitchAnalyzeR` = 1L) %>% 
+  select(gene_id, 
+         `IsoformSwitchAnalyzeR`, 
+         gene_name, 
+         gene_switch_q_value, 
+         rank = Rank)
+
+isa_sets  
+```
+
+* index results 
+
+```{r}
+
+```
+
+
+For the methods that provide a statistical test (not superintronic),
+we have taken the genes with a differential intronic region at an FDR of 0.05. 
+
+
+Note that these comparisons are not quite fair since the gene sets selected
+by each method after filtering are slighty different. Nonetheless we can
+visualise the overlap using an UpSet plot. 
+
+
+```{r}
+
+all_sets <- isa_sets %>% 
+  full_join(polyA_sets) %>% 
+  full_join(irf_ac) %>% 
+  full_join(irf_glm) %>% 
+  mutate_at(vars(starts_with("Isoform"), 
+                 starts_with("superintronic"),
+                 starts_with("IRFinder")), 
+            .funs = ~ if_else(is.na(.), 0L, .)) 
+  
+library(UpSetR)
+plot_sets <- all_sets %>% 
+  select(gene_id, starts_with("Isoform"), 
+                 starts_with("superintronic"),
+                 starts_with("IRFinder"))
+pdf(here::here("img", "olaps-all-methods.pdf"))
+upset(as.data.frame(plot_sets))
+dev.off()
+```

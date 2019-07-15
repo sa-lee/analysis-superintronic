@@ -1,5 +1,5 @@
 ---
-title: "IsoformSwitchAnalzyeR and IRFinder analysis"
+title: "IsoformSwitchAnalzyeR for detecting differential intron retention"
 author: "Stuart Lee, Charity Law"
 date: "`r Sys.Date()`"
 output: 
@@ -147,7 +147,7 @@ alpha since DEXSeq seems quite liberal...
 ```{r isf-dexseq}
 isf_analysed <- isoformSwitchTestDEXSeq(isf_filtered, 
                                         reduceToSwitchingGenes = TRUE,
-                                        alpha = 0.01,
+                                        alpha = 0.05,
                                         dIFcutoff = 0.1)
 isf_analysed
 ```
@@ -184,6 +184,10 @@ is_res <- extractTopSwitches(isf_analysed,
 is_res
 ```
 
+```{r save-res, include = FALSE}
+saveRDS(is_res, here::here("data", "isa_hits.rds"))
+```
+
 We can also look at the coverage plots for these genes (we will choose
 the top 10 genes):
 
@@ -198,64 +202,4 @@ for (i in seq_len(nrow(top10))) {
                       paste0(input$gene_id, "-rank-", input$Rank, ".pdf"))
   ggsave(fname, cplot)
 }
-```
-
-
-Comparing to the previous analysis with superintronic, there is one gene
-overlap between the two methods. The comparison to superintronic is not
-quite the same since this method is based on isoforms within genes between 
-celllines rather
-than our summaries over genes within each cellline separately.
-
-```{r overlaps}
-# only polyA results
-polyA_sets <- hits %>%
-  filter(Kit == "polyA") %>% 
-  dplyr::distinct(gene_id) %>%
-  arrange(gene_id) %>% 
-  mutate(value = 1, 
-         var = paste0("superintronic_", gsub("-", "", CellLine),"_", Kit)) %>% 
-  ungroup() %>%  
-  plyranges::select(gene_id, var, value) %>% 
-  tidyr::spread(var, value) %>% 
-  dplyr::mutate_at(2:3, .funs = ~ dplyr::if_else(is.na(.), 0L, 1L)) 
-
-
-all_sets <- is_res %>%
-  mutate(isa_set = 1L) %>% 
-  select(gene_id, isa_set, gene_name, gene_switch_q_value, rank = Rank) %>% 
-  dplyr::full_join(polyA_sets) %>% 
-  dplyr::mutate_at(dplyr::vars(isa_set, 
-                               dplyr::starts_with("superintronic")), 
-                   .funs = ~ dplyr::if_else(is.na(.), 0L, .)) 
-  
-library(UpSetR)
-plot_sets <- all_sets %>% 
-  select(`IsoformSwitchAnalyzeR` = isa_set, 
-         dplyr::starts_with("superintronic")) %>% 
-  as.data.frame()
-pdf(here::here("img", "olaps-superintronic-isa.pdf"))
-upset(plot_sets)
-dev.off()
-```
-
-
-
-### Comparison to IRFinder
-
-
-```{r, echo = FALSE}
-targets <- filter(parts, 
-                  gene_name %in% c("NBEAL2", "HNRNPL", "HLA-B")
-) %>% 
-  select(gene_id) %>% 
-  as.data.frame()
-
-fig6_plots <- lapply(seq_len(nrow(targets)),
-                function(.x) coverage_plot(targets[.x,]))
-
-fig6 <- patchwork::wrap_plots(fig6_plots, ncol = 1, guides = "keep")
-
-ggsave(here::here("figures/Fig6.pdf"), fig6, height = 7, width = 12)
-
 ```
