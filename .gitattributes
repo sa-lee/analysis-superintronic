@@ -7,3 +7,11 @@ data/filtered-annotation.rds filter=lfs diff=lfs merge=lfs -text
 data/isa_hits.rds filter=lfs diff=lfs merge=lfs -text
 data/parts-coverage.rds filter=lfs diff=lfs merge=lfs -text
 data/superintronic-features.rds filter=lfs diff=lfs merge=lfs -text
+data/IRfinder_GLM_hits.tsv filter=lfs diff=lfs merge=lfs -text
+data/IRfinder_AC_hits.tsv filter=lfs diff=lfs merge=lfs -text
+data/kallisto/R2-100_mRNA filter=lfs diff=lfs merge=lfs -text
+data/kallisto/R3-000_mRNA filter=lfs diff=lfs merge=lfs -text
+data/kallisto/R3-100_mRNA filter=lfs diff=lfs merge=lfs -text
+data/kallisto/R1-000_mRNA filter=lfs diff=lfs merge=lfs -text
+data/kallisto/R1-100_mRNA filter=lfs diff=lfs merge=lfs -text
+data/kallisto/R2-000_mRNA filter=lfs diff=lfs merge=lfs -text
