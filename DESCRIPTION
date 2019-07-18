@@ -21,8 +21,11 @@ Imports:
     tidyr,
     patchwork,
     Rsamtools,
-    here
+    here,
+    INdEX,
+    BiocParallel
 Remotes:
-    sa-lee/superintronic
-    thomasp85/patchwork
+    sa-lee/superintronic,
+    thomasp85/patchwork,
+    shians/INdEX
     
