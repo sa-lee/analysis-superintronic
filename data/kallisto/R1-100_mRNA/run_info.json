@@ -1,0 +1,13 @@
+{
+	"n_targets": 200401,
+	"n_bootstraps": 0,
+	"n_processed": 41435021,
+	"n_pseudoaligned": 36399181,
+	"n_unique": 9411888,
+	"p_pseudoaligned": 87.8,
+	"p_unique": 22.7,
+	"kallisto_version": "0.44.0",
+	"index_version": 10,
+	"start_time": "Sun Jul 14 11:06:21 2019",
+	"call": "kallisto quant -i /stornext/Home/data/allstaff/l/lee.s/intron_report/data/transcripts.idx -o /stornext/Home/data/allstaff/l/lee.s/intron_report/data/kallisto/R1-100_mRNA --single -l 175 -s 20 /stornext/Home/data/allstaff/l/lee.s/intron_report/data-raw/fastq/R1-100_C5N4YANXX_ACAGTGAT_L005_R1.fastq.gz /stornext/Home/data/allstaff/l/lee.s/intron_report/data-raw/fastq/R1-100_C5N4YANXX_ACAGTGAT_L006_R1.fastq.gz /stornext/Home/data/allstaff/l/lee.s/intron_report/data-raw/fastq/R1-100_C5N4YANXX_ACAGTGAT_L007_R1.fastq.gz /stornext/Home/data/allstaff/l/lee.s/intron_report/data-raw/fastq/R1-100_C5N4YANXX_ACAGTGAT_L008_R1.fastq.gz"
+}
