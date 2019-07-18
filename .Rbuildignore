@@ -5,3 +5,4 @@ cache/
 *.log
 data/
 data-raw/
+img/

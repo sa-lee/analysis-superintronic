@@ -1,7 +1,7 @@
 #' Generate coverage plots for IRfinder and ISA
 #' 
 #' Note: that the IRfinder results were obtained
-#' from github.com/charitlaw/intron-reads
+#' from github.com/charitylaw/intron-reads
 #' 
 #' pretty coverage
 coverage_plot <- function(.y) {
@@ -61,10 +61,6 @@ design <- subset(design, Kit == "polyA")
 cvg <- cvg[design$Sample]
 
 
-# load in IRFinder results
-
-
-
 targets <- filter(parts, 
                   gene_name %in% c("NBEAL2", "HNRNPL", "HLA-B")
 ) %>% 
@@ -76,5 +72,5 @@ fig6_plots <- lapply(seq_len(nrow(targets)),
 
 fig6 <- patchwork::wrap_plots(fig6_plots, ncol = 1, guides = "keep")
 
-ggsave(here::here("figures/Fig6.pdf"), fig6, height = 7, width = 12)
+ggsave(here::here("img/Fig6.pdf"), fig6, height = 7, width = 12)
 
