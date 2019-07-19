@@ -1,7 +1,10 @@
 #' Generate coverage plots for IRfinder and ISA
 #' 
+#' Generate coverage plots for short and long genes
+#' 
 #' Note: that the IRfinder results were obtained
 #' from github.com/charitylaw/intron-reads
+#' 
 #' 
 #' pretty coverage
 coverage_plot <- function(.y) {
@@ -47,10 +50,9 @@ coverage_plot <- function(.y) {
   
 }
 
-
 library(plyranges)
 library(superintronic)
-
+library(ggplot2)
 
 # previously obtained coverage and design
 design <- readRDS(here::here("data", "design.rds"))
@@ -73,4 +75,3 @@ fig6_plots <- lapply(seq_len(nrow(targets)),
 fig6 <- patchwork::wrap_plots(fig6_plots, ncol = 1, guides = "keep")
 
 ggsave(here::here("img/Fig6.pdf"), fig6, height = 7, width = 12)
-
