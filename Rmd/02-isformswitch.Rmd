@@ -17,50 +17,10 @@ knitr::opts_chunk$set(
                       cache.path = here::here("cache/")
                       )
 
-coverage_plot <- function(.y) {
-  target <- filter(parts, gene_id == !!.y$gene_id)
-  
-  # set up parts
-  cvg_rng <- as(lapply(cvg, function(x) join_parts(x, target)), "GRangesList")
-  md <- DataFrame(Sample = Rle(names(cvg_rng), lengths(cvg_rng)),
-                  CellLine = Rle(design$CellLine, lengths(cvg_rng)),
-                  Kit = Rle(as.factor(design$Kit), lengths(cvg_rng)))
-  cvg_rng <- unlist(cvg_rng, use.names = FALSE)
-  mcols(cvg_rng) <- cbind(mcols(cvg_rng), md)
-  cvg_rng <- cvg_rng %>% 
-        mutate(log_score = log2(score + 0.5),
-               strand = strand(target),
-               var = paste0("Kit: ", Kit, " Cellline: ", CellLine))
-  
-  
-  p <- view_coverage(cvg_rng, 
-                     score = log_score, 
-                     colour = feature_type,  
-                     facets = dplyr::vars(var)) +
-    ylim(0, NA) +
-    guides(colour = FALSE) +
-    scale_color_brewer(palette = "Dark2") +
-    labs(subtitle = paste("Coverage over", target$gene_name),
-         y = "Log coverage"
-    ) +
-    theme_bw() +
-    theme(axis.text.x = element_blank(),
-          axis.ticks.x = element_blank(),
-          strip.text = element_text(hjust = 0, size = 8),
-          strip.background = element_blank()) +
-    expand_limits(y = 0)
-  
-  segments <- superintronic:::flatten_parts(target)
-  track <- view_segments(segments, color = feature_type) +
-    theme(axis.text.x = element_text(size = 8))
 
-  patchwork::wrap_plots(p, track, 
-                        ncol = 1, 
-                        heights = c(2, 0.25))
-  
-} 
 library(plyranges)
 library(superintronic)
+library(ggplot2)
 
 # external inputs
 design <- readRDS(here::here("data", "design.rds"))
@@ -171,7 +131,7 @@ isf_analysed$switchConsequence %>%
 And the results can be summarised at the gene level and compared to the 
 superintronic analysis. 
 
-At the gene level there are around 210 genes declared significant
+At the gene level there are around 502 genes declared significant
 at 0.01 fdr cut-off between the celllines kits that
 are filtered for intron retention events.
 
@@ -197,9 +157,9 @@ top10 <- is_res %>%
 
 for (i in seq_len(nrow(top10))) {
   input <- top10[i,]
-  cplot <- coverage_plot(input)
+  cplot <- pretty_cov_plot(cvg, parts, input, heights = c(2, 0.25))
   fname <- here::here("img", "isa-cov", 
-                      paste0(input$gene_id, "-rank-", input$Rank, ".pdf"))
+                      paste0(input$gene_id, "-rank-", sprintf("%02s", input$Rank), ".pdf"))
   ggsave(fname, cplot)
 }
 ```

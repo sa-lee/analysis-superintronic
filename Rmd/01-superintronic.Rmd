@@ -20,6 +20,7 @@ knitr::opts_chunk$set(
 # pre load libraries
 suppressPackageStartupMessages(library(plyranges))
 suppressPackageStartupMessages(library(superintronic))
+library(ggplot2)
 
 # use hexbinning for pairs plot
 hex <- function(data, mapping, ...) {
@@ -28,6 +29,8 @@ hex <- function(data, mapping, ...) {
     # ggplot2::geom_point(data = filter(data, gene_id %in% gene_paper), colour = "red") +
     ggplot2::scale_fill_viridis_c(direction = -1)
 }
+
+source(here::here("R", "prettycov.R"))
 ```
 
 # Introduction
@@ -280,39 +283,6 @@ saveRDS(hits, here::here("data", "superintronic-hits.rds"))
 6. And show the coverage plots for the `nrow(sets)` genes.
 
 ```{r superintronic-coverage-plots, include = FALSE}
-coverage_plot <- function(.y) {
-  target <- filter(parts_sub, gene_id == !!.y$gene_id)
-  cvg_rng <- filter_by_overlaps(cvg_over_features, target) %>% 
-    mutate(strand = strand(target),
-           var = paste0("Kit: ", Kit, " Cellline: ", CellLine))
-  p <- view_coverage(cvg_rng, 
-                     score = log_score, 
-                     colour = feature_type,  
-                     facets = dplyr::vars(var)) +
-    ylim(0, NA) +
-    guides(colour = FALSE) +
-    scale_color_brewer(palette = "Dark2") +
-    labs(subtitle = paste("Coverage over",
-                           target$gene_name, "-", as.character(target)),
-         y = "average log coverage"
-    ) +
-    theme_bw() +
-    theme(axis.text.x = element_blank(),
-          axis.ticks.x = element_blank(),
-          strip.text = element_text(hjust = 0, size = 8),
-          strip.background = element_blank()) +
-    expand_limits(y = 0)
-  
-  segments <- superintronic:::flatten_parts(target)
-  track <- view_segments(segments, color = feature_type) +
-    theme(axis.text.x = element_text(size = 8))
-
-  patchwork::wrap_plots(p, track, 
-                        ncol = 1, 
-                        heights = c(4, 0.25))
-  
-} 
-
 # look at combinations and save those coverage plots
 # this is really clunky code but gets the job done
 sets <- sets %>% 
@@ -322,7 +292,7 @@ sets <- sets %>%
 all_sets <- dplyr::filter(sets, combo == 4)
 
 for (gene in seq_len(nrow(all_sets))) {
-  track_plot <- coverage_plot(all_sets[gene,])
+  track_plot <- pretty_cov_plot(cvg_over_features, parts_sub, all_sets[gene,], heights = c(4, 0.25))
   ggsave(here::here("img", 
                     paste0("all-sets-hit-", all_sets[gene, "gene_id"], ".pdf")),
          plot = track_plot
@@ -339,7 +309,7 @@ for (gene in seq_len(nrow(three_sets))) {
            )
   )
   cols <- paste(gsub(" ", "-", cols), collapse = "_")
-  track_plot <- coverage_plot(input)
+  track_plot <- pretty_cov_plot(cvg_over_features, parts_sub, input, heights = c(4, 0.25))
   ggsave(here::here("img", 
                     paste0("three-sets-hit-", cols, "-", input$gene_id, ".pdf")),
          plot = track_plot
@@ -356,7 +326,7 @@ for (gene in seq_len(nrow(two_sets))) {
            )
   )
   cols <- paste(gsub(" ", "-", cols), collapse = "_")
-  track_plot <- coverage_plot(input)
+  track_plot <- pretty_cov_plot(cvg_over_features, parts_sub, input, heights = c(4, 0.25))
   ggsave(here::here("img", 
                     paste0("two-sets-hit-", cols, "-", input$gene_id, ".pdf")),
          plot = track_plot
@@ -373,7 +343,7 @@ for (gene in seq_len(nrow(one_sets))) {
            )
   )
   cols <- paste(gsub(" ", "-", cols), collapse = "_")
-  track_plot <- coverage_plot(input)
+  track_plot <- pretty_cov_plot(cvg_over_features, parts_sub, input, heights = c(4, 0.25))
   ggsave(here::here("img", 
                     paste0("one-sets-hit-", cols, "-", input$gene_id, ".pdf")),
          plot = track_plot
