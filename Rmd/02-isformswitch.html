@@ -11,7 +11,7 @@
 
 <meta name="author" content="Stuart Lee, Charity Law" />
 
-<meta name="date" content="2019-07-15" />
+<meta name="date" content="2019-07-19" />
 
 <title>IsoformSwitchAnalzyeR for detecting differential intron retention</title>
 
@@ -377,7 +377,7 @@ $(document).ready(function () {
 
 <h1 class="title toc-ignore">IsoformSwitchAnalzyeR for detecting differential intron retention</h1>
 <h4 class="author">Stuart Lee, Charity Law</h4>
-<h4 class="date">2019-07-15</h4>
+<h4 class="date">2019-07-19</h4>
 
 </div>
 
@@ -1175,7 +1175,7 @@ isf_analysed$switchConsequence %&gt;%
 #&gt; 3 Intron retention switch    24</code></pre>
 <p>And the results can be summarised at the gene level and compared to the
 superintronic analysis.</p>
-<p>At the gene level there are around 210 genes declared significant
+<p>At the gene level there are around 502 genes declared significant
 at 0.01 fdr cut-off between the celllines kits that
 are filtered for intron retention events.</p>
 <pre class="r"><code>is_res &lt;- extractTopSwitches(isf_analysed, 
@@ -1208,7 +1208,7 @@ for (i in seq_len(nrow(top10))) {
   input &lt;- top10[i,]
   cplot &lt;- coverage_plot(input)
   fname &lt;- here::here(&quot;img&quot;, &quot;isa-cov&quot;, 
-                      paste0(input$gene_id, &quot;-rank-&quot;, input$Rank, &quot;.pdf&quot;))
+                      paste0(input$gene_id, &quot;-rank-&quot;, sprintf(&quot;%02s&quot;, input$Rank), &quot;.pdf&quot;))
   ggsave(fname, cplot)
 }</code></pre>
 </div>

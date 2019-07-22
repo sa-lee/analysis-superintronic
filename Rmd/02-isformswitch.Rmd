@@ -21,6 +21,7 @@ knitr::opts_chunk$set(
 library(plyranges)
 library(superintronic)
 library(ggplot2)
+source(here::here("R", "prettycov.R"))
 
 # external inputs
 design <- readRDS(here::here("data", "design.rds"))
