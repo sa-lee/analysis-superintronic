@@ -7,7 +7,7 @@ library(plyranges)
 library(ggplot2)
 library(patchwork)
 
-source(here::here("R", "prettcov.R"))
+source(here::here("R", "prettycov.R"))
 
 parts_sub <- readRDS(here::here("data", "filtered-annotation.rds"))
 
