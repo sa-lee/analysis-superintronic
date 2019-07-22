@@ -54,7 +54,7 @@ parts_tbl <- parts %>%
 
 Here we look at the overlap between the following methods:
 
-* superintronic run on all kits in each of the HCC287 and NCIH1975 celllines
+* superintronic run on all kits in each of the HCC827 and NCIH1975 celllines
 ```{r si-sets}
 # only polyA results
 polyA_sets <- hits %>%
