@@ -2,7 +2,7 @@
 ^\.Rproj\.user$
 fastq/
 cache/
-*.log
+^.*\.log$
 data/
 data-raw/
 img/

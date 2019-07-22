@@ -28,4 +28,5 @@ Remotes:
     sa-lee/superintronic,
     thomasp85/patchwork,
     shians/INdEX
-    
+RoxygenNote: 6.1.1
+Encoding: UTF-8
