@@ -1,9 +1,9 @@
 Package: rcsuper
 Title: Reserach Compendium for superintronic analyses
-Version: 0.0.1
+Version: 0.0.2
 Authors@R: person("Stuart", "Lee", email = "lee.s@wehi.edu.au",
                   role = c("aut", "cre"))
-Description: Analysis scripts and data for Law et al. paper
+Description: Analysis scripts and data for Lee, Zhang et al. paper
 Depends: R (>= 3.6.0)
 Imports:
     plyranges,
@@ -22,11 +22,15 @@ Imports:
     patchwork,
     Rsamtools,
     here,
-    INdEX,
-    BiocParallel
+    index,
+    BiocParallel,
+    UpSetR,
+    mgcv
 Remotes:
     sa-lee/superintronic,
     thomasp85/patchwork,
-    shians/INdEX
+    shians/index
 RoxygenNote: 6.1.1
 Encoding: UTF-8
+URL: https://github.com/sa-lee/analysis-superintronic
+BugReports: https://github.com/sa-lee/analysis-superintronic/issues

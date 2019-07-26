@@ -3,6 +3,5 @@
 fastq/
 cache/
 ^.*\.log$
-data/
-data-raw/
-img/
+^img$
+^data$
