@@ -1,6 +1,6 @@
 Package: rcsuper
 Title: Reserach Compendium for superintronic analyses
-Version: 0.0.2
+Version: 0.0.3
 Authors@R: person("Stuart", "Lee", email = "lee.s@wehi.edu.au",
                   role = c("aut", "cre"))
 Description: Analysis scripts and data for Lee, Zhang et al. paper

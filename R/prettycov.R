@@ -49,6 +49,7 @@ pretty_cov_plot <- function(cvg, parts, target, design = NULL, alpha = FALSE, ..
   
   segments <- superintronic::unnest_parts(target)
   track <- view_segments(segments, colour = feature_type) +
+    theme_bw() +
     theme(axis.text.x = element_text(size = 8))
   
   patchwork::wrap_plots(p, 
