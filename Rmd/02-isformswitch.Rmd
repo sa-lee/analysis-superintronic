@@ -121,7 +121,7 @@ alpha since DEXSeq seems quite liberal...
 ```{r isf-dexseq}
 isf_analysed <- isoformSwitchTestDEXSeq(isf_filtered, 
                                         reduceToSwitchingGenes = TRUE,
-                                        alpha = 0.01,
+                                        alpha = 0.05,
                                         dIFcutoff = 0.1)
 isf_analysed
 ```
@@ -129,7 +129,7 @@ isf_analysed
 
 Now we can analyse intron retention events from one kit relative to another:
 
-```{r isf-intron-retention, cache=TRUE}
+```{r isf-intron-retention}
 # this takes quite a while to compute...
 isf_analysed <- analyzeIntronRetention(isf_analysed)
 isf_analysed <- analyzeSwitchConsequences(isf_analysed, "intron_retention")

@@ -7,11 +7,12 @@
 <meta charset="utf-8" />
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
 <meta name="author" content="Stuart Lee, Charity Law" />
 
-<meta name="date" content="2019-07-19" />
+<meta name="date" content="2019-07-26" />
 
 <title>IsoformSwitchAnalzyeR for detecting differential intron retention</title>
 
@@ -344,18 +345,6 @@ summary {
 }
 </style>
 
-<script>
-$(document).ready(function () {
-  window.buildTabsets("TOC");
-});
-
-$(document).ready(function () {
-  $('.tabset-dropdown > .nav-tabs > li').click(function () {
-    $(this).parent().toggleClass('nav-tabs-open')
-  });
-});
-</script>
-
 <!-- code folding -->
 
 
@@ -377,7 +366,7 @@ $(document).ready(function () {
 
 <h1 class="title toc-ignore">IsoformSwitchAnalzyeR for detecting differential intron retention</h1>
 <h4 class="author">Stuart Lee, Charity Law</h4>
-<h4 class="date">2019-07-19</h4>
+<h4 class="date">2019-07-26</h4>
 
 </div>
 
@@ -478,7 +467,7 @@ isf_analysed</code></pre>
 #&gt; 
 #&gt; Switching features:
 #&gt;            Comparison switchingIsoforms switchingGenes
-#&gt; 1 HCC287 vs NCI_H1975              1998           1174
+#&gt; 1 HCC827 vs NCI_H1975              1998           1174
 #&gt; 
 #&gt; Feature analyzed:
 #&gt; [1] &quot;Isoform Switch Identification, ORFs, ntSequence&quot;</code></pre>
@@ -514,8 +503,6 @@ isf_analysed &lt;- analyzeIntronRetention(isf_analysed)</code></pre>
   |=====                                                            |   7%
   |                                                                       
   |=====                                                            |   8%
-  |                                                                       
-  |======                                                           |   8%
   |                                                                       
   |======                                                           |   9%
   |                                                                       
@@ -591,8 +578,6 @@ isf_analysed &lt;- analyzeIntronRetention(isf_analysed)</code></pre>
   |                                                                       
   |====================                                             |  31%
   |                                                                       
-  |====================                                             |  32%
-  |                                                                       
   |=====================                                            |  32%
   |                                                                       
   |=====================                                            |  33%
@@ -647,8 +632,6 @@ isf_analysed &lt;- analyzeIntronRetention(isf_analysed)</code></pre>
   |                                                                       
   |===============================                                  |  48%
   |                                                                       
-  |================================                                 |  48%
-  |                                                                       
   |================================                                 |  49%
   |                                                                       
   |================================                                 |  50%
@@ -656,8 +639,6 @@ isf_analysed &lt;- analyzeIntronRetention(isf_analysed)</code></pre>
   |=================================                                |  50%
   |                                                                       
   |=================================                                |  51%
-  |                                                                       
-  |=================================                                |  52%
   |                                                                       
   |==================================                               |  52%
   |                                                                       
@@ -712,8 +693,6 @@ isf_analysed &lt;- analyzeIntronRetention(isf_analysed)</code></pre>
   |============================================                     |  67%
   |                                                                       
   |============================================                     |  68%
-  |                                                                       
-  |=============================================                    |  68%
   |                                                                       
   |=============================================                    |  69%
   |                                                                       
@@ -788,8 +767,6 @@ isf_analysed &lt;- analyzeIntronRetention(isf_analysed)</code></pre>
   |===========================================================      |  90%
   |                                                                       
   |===========================================================      |  91%
-  |                                                                       
-  |===========================================================      |  92%
   |                                                                       
   |============================================================     |  92%
   |                                                                       
@@ -849,8 +826,6 @@ isf_analysed &lt;- analyzeIntronRetention(isf_analysed)</code></pre>
   |                                                                       
   |=====                                                            |   8%
   |                                                                       
-  |======                                                           |   8%
-  |                                                                       
   |======                                                           |   9%
   |                                                                       
   |======                                                           |  10%
@@ -924,8 +899,6 @@ isf_analysed &lt;- analyzeIntronRetention(isf_analysed)</code></pre>
   |====================                                             |  30%
   |                                                                       
   |====================                                             |  31%
-  |                                                                       
-  |====================                                             |  32%
   |                                                                       
   |=====================                                            |  32%
   |                                                                       
@@ -1047,8 +1020,6 @@ isf_analysed &lt;- analyzeIntronRetention(isf_analysed)</code></pre>
   |                                                                       
   |============================================                     |  68%
   |                                                                       
-  |=============================================                    |  68%
-  |                                                                       
   |=============================================                    |  69%
   |                                                                       
   |=============================================                    |  70%
@@ -1123,8 +1094,6 @@ isf_analysed &lt;- analyzeIntronRetention(isf_analysed)</code></pre>
   |                                                                       
   |===========================================================      |  91%
   |                                                                       
-  |===========================================================      |  92%
-  |                                                                       
   |============================================================     |  92%
   |                                                                       
   |============================================================     |  93%
@@ -1155,12 +1124,12 @@ isf_analysed &lt;- analyzeIntronRetention(isf_analysed)</code></pre>
 <pre class="r"><code># the result
 isf_analysed</code></pre>
 <pre><code>#&gt; This switchAnalyzeRlist list contains:
-#&gt;  15324 isoforms from 2366 genes
+#&gt;  7246 isoforms from 1174 genes
 #&gt;  1 comparison from 2 conditions (in total 6 samples)
 #&gt; 
 #&gt; Switching features:
-#&gt;           Comparison switchingIsoforms switchingGenes
-#&gt; 1 polyA vs total_RNA              5440           2366
+#&gt;            Comparison switchingIsoforms switchingGenes
+#&gt; 1 HCC827 vs NCI_H1975              1998           1174
 #&gt; 
 #&gt; Feature analyzed:
 #&gt; [1] &quot;Isoform Switch Identification, ORFs, ntSequence, Intron Retentions, Switch Consequences&quot;</code></pre>
@@ -1170,43 +1139,43 @@ isf_analysed$switchConsequence %&gt;%
 <pre><code>#&gt; # A tibble: 3 x 2
 #&gt;   switchConsequence           n
 #&gt;   &lt;chr&gt;                   &lt;int&gt;
-#&gt; 1 Intron retention gain     255
-#&gt; 2 Intron retention loss     470
-#&gt; 3 Intron retention switch    24</code></pre>
+#&gt; 1 Intron retention gain     193
+#&gt; 2 Intron retention loss     166
+#&gt; 3 Intron retention switch    12</code></pre>
 <p>And the results can be summarised at the gene level and compared to the
 superintronic analysis.</p>
-<p>At the gene level there are around 502 genes declared significant
-at 0.01 fdr cut-off between the celllines kits that
-are filtered for intron retention events.</p>
 <pre class="r"><code>is_res &lt;- extractTopSwitches(isf_analysed, 
                              filterForConsequences = TRUE, 
                              n = NA) %&gt;% 
   dplyr::as_tibble()
 
 is_res</code></pre>
-<pre><code>#&gt; # A tibble: 502 x 8
+<pre><code>#&gt; # A tibble: 257 x 8
 #&gt;    gene_ref gene_id gene_name condition_1 condition_2 gene_switch_q_v…
 #&gt;    &lt;chr&gt;    &lt;chr&gt;   &lt;chr&gt;     &lt;chr&gt;       &lt;chr&gt;                  &lt;dbl&gt;
-#&gt;  1 geneCom… ENSG00… PSMA6     polyA       total_RNA          0.       
-#&gt;  2 geneCom… ENSG00… DHCR24    polyA       total_RNA          0.       
-#&gt;  3 geneCom… ENSG00… RPL21     polyA       total_RNA          0.       
-#&gt;  4 geneCom… ENSG00… RPS27A    polyA       total_RNA          0.       
-#&gt;  5 geneCom… ENSG00… RPS7      polyA       total_RNA          0.       
-#&gt;  6 geneCom… ENSG00… CALR      polyA       total_RNA          0.       
-#&gt;  7 geneCom… ENSG00… S100A6    polyA       total_RNA          0.       
-#&gt;  8 geneCom… ENSG00… C19orf53  polyA       total_RNA          4.84e-306
-#&gt;  9 geneCom… ENSG00… TRAPPC5   polyA       total_RNA          3.62e-293
-#&gt; 10 geneCom… ENSG00… RPL28     polyA       total_RNA          4.78e-291
-#&gt; # … with 492 more rows, and 2 more variables:
+#&gt;  1 geneCom… ENSG00… HLA-B     HCC827      NCI_H1975          0.       
+#&gt;  2 geneCom… ENSG00… ECH1      HCC827      NCI_H1975          5.94e-210
+#&gt;  3 geneCom… ENSG00… FHL2      HCC827      NCI_H1975          3.64e-149
+#&gt;  4 geneCom… ENSG00… HLA-A     HCC827      NCI_H1975          6.89e-141
+#&gt;  5 geneCom… ENSG00… ELP5      HCC827      NCI_H1975          1.40e-120
+#&gt;  6 geneCom… ENSG00… ST3GAL1   HCC827      NCI_H1975          2.17e- 59
+#&gt;  7 geneCom… ENSG00… GRAMD2B   HCC827      NCI_H1975          9.46e- 57
+#&gt;  8 geneCom… ENSG00… PFKFB4    HCC827      NCI_H1975          2.79e- 54
+#&gt;  9 geneCom… ENSG00… NBPF12    HCC827      NCI_H1975          1.47e- 52
+#&gt; 10 geneCom… ENSG00… GTF2H2    HCC827      NCI_H1975          1.14e- 39
+#&gt; # … with 247 more rows, and 2 more variables:
 #&gt; #   switchConsequencesGene &lt;lgl&gt;, Rank &lt;int&gt;</code></pre>
+<p>At the gene level there are around 257 genes declared significant
+at 0.05 fdr cut-off between the celllines kits that
+are filtered for intron retention events.</p>
 <p>We can also look at the coverage plots for these genes (we will choose
 the top 10 genes):</p>
 <pre class="r"><code>top10 &lt;- is_res %&gt;% 
-  filter(Rank &lt; 10)
+  filter(Rank &lt;= 10) 
 
 for (i in seq_len(nrow(top10))) {
   input &lt;- top10[i,]
-  cplot &lt;- coverage_plot(input)
+  cplot &lt;- pretty_cov_plot(cvg, parts, input, design, heights = c(2, 0.25))
   fname &lt;- here::here(&quot;img&quot;, &quot;isa-cov&quot;, 
                       paste0(input$gene_id, &quot;-rank-&quot;, sprintf(&quot;%02s&quot;, input$Rank), &quot;.pdf&quot;))
   ggsave(fname, cplot)
@@ -1230,6 +1199,23 @@ $(document).ready(function () {
 
 
 </script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
+</script>
+
+<!-- code folding -->
+
 
 <!-- dynamically load mathjax for compatibility with self-contained -->
 <script>
