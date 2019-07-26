@@ -27,12 +27,26 @@ source(here::here("R", "prettycov.R"))
 design <- readRDS(here::here("data", "design.rds"))
 parts <- readRDS(here::here("data", "complete-annotation.rds"))
 cvg <- readRDS(here::here("data", "complete-coverage.rds"))
+names(cvg) <- design$Sample
 all_features <- readRDS(here::here("data", "superintronic-features.rds"))
 hits <- readRDS(here::here("data", "superintronic-hits.rds")) 
 
 # update for relevant samples
 design <- subset(design, Kit == "polyA")
 cvg <- cvg[design$Sample]
+
+# download gencode files if they don't exist
+if (!dir.exists(here::here("data-raw"))) dir.create(here::here("data-raw"))
+
+gtf <- "ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_27/gencode.v27.annotation.gtf.gz"
+
+gtf_dest <- here::here("data-raw", "gencode.v27.annotation.gtf.gz")
+if (!file.exists(gtf_dest)) download.file(gtf, gtf_dest)
+
+fa <- "ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_27/gencode.v27.transcripts.fa.gz"
+fa_dest <- here::here("data-raw", "gencode.v27.transcripts.fa.gz")
+if (!file.exists(fa_dest)) download.file(fa, fa_dest)
+
 ```
 
 ##  IsoformSwitchAnalyzeR analysis
@@ -82,12 +96,11 @@ isf
 
 3. Filtering isoforms
 
-
 Next we prefilter, the isoforms using roughly the same filters we used
 in the superintronic analysis above. To speed things up we could further
 specify a gene expression filter, but we have left that out for now.
 
-```{r isf-filtered, cahce = TRUE, dependson=isf}
+```{r isf-filtered, dependson=isf}
 isf_filtered <- preFilter(isf,
                           acceptedGeneBiotype = "protein_coding",
                           removeSingleIsoformGenes = TRUE,
@@ -108,7 +121,7 @@ alpha since DEXSeq seems quite liberal...
 ```{r isf-dexseq}
 isf_analysed <- isoformSwitchTestDEXSeq(isf_filtered, 
                                         reduceToSwitchingGenes = TRUE,
-                                        alpha = 0.05,
+                                        alpha = 0.01,
                                         dIFcutoff = 0.1)
 isf_analysed
 ```
@@ -132,9 +145,7 @@ isf_analysed$switchConsequence %>%
 And the results can be summarised at the gene level and compared to the 
 superintronic analysis. 
 
-At the gene level there are around 502 genes declared significant
-at 0.01 fdr cut-off between the celllines kits that
-are filtered for intron retention events.
+
 
 ```{r top-table}
 is_res <- extractTopSwitches(isf_analysed, 
@@ -145,6 +156,10 @@ is_res <- extractTopSwitches(isf_analysed,
 is_res
 ```
 
+At the gene level there are around `r nrow(is_res)` genes declared significant
+at 0.05 fdr cut-off between the celllines kits that
+are filtered for intron retention events.
+
 ```{r save-res, include = FALSE}
 saveRDS(is_res, here::here("data", "isa_hits.rds"))
 ```
@@ -154,11 +169,11 @@ the top 10 genes):
 
 ```{r isf-coverage-plots}
 top10 <- is_res %>% 
-  filter(Rank < 10)
+  filter(Rank <= 10) 
 
 for (i in seq_len(nrow(top10))) {
   input <- top10[i,]
-  cplot <- pretty_cov_plot(cvg, parts, input, heights = c(2, 0.25))
+  cplot <- pretty_cov_plot(cvg, parts, input, design, heights = c(2, 0.25))
   fname <- here::here("img", "isa-cov", 
                       paste0(input$gene_id, "-rank-", sprintf("%02s", input$Rank), ".pdf"))
   ggsave(fname, cplot)
