@@ -1,0 +1,143 @@
+---
+title: "Overlaps with InDeX classifications"
+author: "Stuart Lee"
+date: "`r Sys.Date()`"
+output: 
+  bookdown::html_document2:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.path = here::here("img/"))
+library(dplyr)
+parts <- readRDS(here::here("data", "complete-annotation.rds"))
+
+hits <- readRDS(here::here("data", "superintronic-hits.rds"))
+
+parts_tbl <- parts %>% 
+  plyranges::select(gene_id, gene_name, .drop_ranges = TRUE) %>% 
+  as_tibble()
+
+source(here::here("R/prettycov.R"))
+```
+
+## Extract superintronic hits 
+
+
+* superintronic run on all kits in each of the HCC827 and NCIH1975 celllines
+```{r si-sets}
+# only polyA results
+polyA_sets <- hits %>%
+  filter(Kit == "polyA") %>% 
+  distinct(gene_id) %>%
+  arrange(gene_id) %>% 
+  mutate(value = 1, 
+         var = paste0("superintronic:", gsub("-", "", CellLine),"_", Kit)) %>% 
+  ungroup() %>%  
+  plyranges::select(gene_id, var, value) %>% 
+  tidyr::spread(var, value) %>% 
+  dplyr::mutate_at(2:3, .funs = ~ dplyr::if_else(is.na(.), 0L, 1L)) %>% 
+  left_join(parts_tbl)
+
+totalRNA_sets <- hits %>%
+  filter(Kit == "total-RNA") %>% 
+  distinct(gene_id) %>%
+  arrange(gene_id) %>% 
+  mutate(value = 1, 
+         var = paste0("superintronic:", gsub("-", "", CellLine),"_", Kit)) %>% 
+  ungroup() %>%  
+  plyranges::select(gene_id, var, value) %>% 
+  tidyr::spread(var, value) %>% 
+  dplyr::mutate_at(2:3, .funs = ~ dplyr::if_else(is.na(.), 0L, 1L)) %>% 
+  left_join(parts_tbl)
+```
+
+
+## Run index
+
+```{r}
+library(index)
+exon <- readRDS(system.file("extdata/exon_dge.Rds", package = "index"))
+intron <- readRDS(system.file("extdata/intron_dge.Rds", package = "index"))
+group <- readRDS(system.file("extdata/group.Rds", package = "index"))
+
+x <- index_analysis(exon, intron, group)
+
+res <- x$tops$intron %>% 
+  mutate(classification = x$category) %>% 
+  as_tibble()
+
+index_res <- res %>% 
+  filter(adj.P.Val < 0.01) %>% 
+  select(gene_id = GeneID, index_pval = adj.P.Val, logfc = logFC) %>% 
+  mutate(`index` = 1L) 
+
+index_res
+```
+
+For the methods that provide a statistical test (not superintronic),
+we have taken the genes with a differential intronic region at an FDR of 0.05. 
+
+Note that these comparisons are not quite fair since the gene sets selected
+by each method after filtering are slighty different. Nonetheless we can
+visualise the overlap using an UpSet plot. 
+
+## index sets overlapping total RNA comparisons
+
+All hits discovered by superintronic except for 19 genes are 
+obtained by the index analysis. 
+
+```{r index_olap}
+library(UpSetR)
+dex_set <- index_res %>% 
+  full_join(totalRNA_sets) %>% 
+  mutate_at(vars(index, starts_with("superintronic")), 
+            .funs = ~ if_else(is.na(.), 0L, .)) 
+
+upset(as.data.frame(dex_set))
+```
+
+How many genes in DEList overlap with HCC287 total RNA = 13 
+How many genes in DEList overlap with NCIH1975 total RNA = 16
+How many genes overlap between the overlapping genes = 12.  
+
+If we look at the direction of the logFC  when there is overlap, the
+superintronic results are concordant (the design matrix has contrasts where
+up is:
+
+```{r}
+dex_set %>% 
+  count(`superintronic:HCC287_total-RNA`, 
+        `superintronic:NCIH1975_total-RNA`, 
+        sign(logfc)) %>% 
+  filter(`superintronic:HCC287_total-RNA` != 0 | 
+           `superintronic:NCIH1975_total-RNA` != 0)
+```
+
+## Coverage plots for intron+/-
+
+```{r}
+# sort by t-statistic
+intron_plus_minus <- res %>% 
+  filter(grepl("Intron", classification), adj.P.Val < 0.01) %>%
+  arrange(desc(abs(t)))
+
+top10_genes <- intron_plus_minus %>% 
+  dplyr::slice(1:10) %>% 
+  select(gene_id =  GeneID, classification) %>% 
+  mutate_all(as.character)
+
+
+cvg_over_features <- readRDS(here::here("data","complete-coverage.rds")) 
+design <- readRDS(here::here("data", "design.rds"))
+
+for (i in seq_len(nrow(top10_genes))) {
+  current <-  top10_genes[i,]
+  track_plot <- pretty_cov_plot(cvg_over_features, 
+                                parts,
+                                current,
+                                design,
+                                heights = c(4, 0.25))
+}
+
+```

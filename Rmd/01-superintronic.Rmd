@@ -280,7 +280,7 @@ saveRDS(all_features, here::here("data", "superintronic-features.rds"))
 saveRDS(hits, here::here("data", "superintronic-hits.rds"))
 ```
 
-6. And show the coverage plots for the `r nrow(sets)` genes.
+6. And show the coverage plots for the `nrow(sets)` genes.
 
 ```{r superintronic-coverage-plots, include = FALSE}
 # look at combinations and save those coverage plots
@@ -351,4 +351,4 @@ for (gene in seq_len(nrow(one_sets))) {
 }
 ```
 
-Note that all these files are now saved in `r here::here("img")`.
+

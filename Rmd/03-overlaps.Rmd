@@ -1,5 +1,5 @@
 ---
-title: "Overlapping hits between superintronic, INdEX, ISA and IRfinder"
+title: "Overlapping hits between superintronic, index, ISA and IRfinder"
 author: "Stuart Lee"
 date: "`r Sys.Date()`"
 output: 
@@ -144,7 +144,7 @@ x <- index_analysis(exon, intron, group)
 index_res <- x$tops$intron %>% 
   filter(adj.P.Val < 0.01) %>% 
   select(gene_id = GeneID, index_pval = adj.P.Val, logfc = logFC) %>% 
-  mutate(`INdEX` = 1L) %>% 
+  mutate(`index` = 1L) %>% 
   as_tibble()
 
 index_res
@@ -159,16 +159,16 @@ by each method after filtering are slighty different. Nonetheless we can
 visualise the overlap using an UpSet plot. 
 
 
-# INdEX sets overlapping total RNA comparisons
+# index sets overlapping total RNA comparisons
 
 All hits discovered by superintronic except for 19 genes are 
-obtained by the INdEX analysis. 
+obtained by the index analysis. 
 
 ```{r index_olap}
 library(UpSetR)
 dex_set <- index_res %>% 
   full_join(totalRNA_sets) %>% 
-  mutate_at(vars(INdEX, starts_with("superintronic")), 
+  mutate_at(vars(index, starts_with("superintronic")), 
             .funs = ~ if_else(is.na(.), 0L, .)) 
 
 upset(as.data.frame(dex_set))
@@ -240,13 +240,13 @@ Are there any common genes to both polyA celllines, that are also DE in intron c
 de_sets <- index_res %>% 
   full_join(polyA_sets) %>% 
   full_join(irf_glm) %>% 
-  mutate_at(vars(INdEX, 
+  mutate_at(vars(index, 
                  starts_with("superintronic"),
                  starts_with("IRFinder")), 
             .funs = ~ if_else(is.na(.), 0L, .)) 
 
 de_sets %>%
-  select(gene_id, INdEX, starts_with("superintronic"), starts_with("IRFinder")) %>% 
+  select(gene_id, index, starts_with("superintronic"), starts_with("IRFinder")) %>% 
   as.data.frame() %>% 
   upset()
 ```
@@ -270,3 +270,5 @@ libraries %>%
   as.data.frame() %>% 
   upset()
 ```
+
+

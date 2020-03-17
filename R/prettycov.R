@@ -40,16 +40,16 @@ pretty_cov_plot <- function(cvg, parts, target, design = NULL, alpha = FALSE, ..
     labs(subtitle = paste("Coverage over", target$gene_name),
          y = "Log coverage"
     ) +
-    theme_bw() +
+    theme_bw(base_size = 30) +
     theme(axis.text.x = element_blank(),
           axis.ticks.x = element_blank(),
           strip.text = element_text(hjust = 0, size = 8),
           strip.background = element_blank()) +
     expand_limits(y = 0)
   
-  segments <- superintronic::unnest_parts(target)
-  track <- view_segments(segments, colour = feature_type) +
-    theme_bw() +
+  segments <- superintronic:::flatten_parts(target)
+  track <- view_segments(segments, color = feature_type) +
+    theme_bw(base_size = 30)
     theme(axis.text.x = element_text(size = 8))
   
   patchwork::wrap_plots(p, 
