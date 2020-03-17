@@ -104,7 +104,7 @@ fig3a <- ggplot(tbl, aes(x = bin, y = lumpy, colour = Kit, group = Sample)) +
   geom_line() +
   facet_grid(feature_type ~ cat, scales = "free_y") +
   scale_color_manual(values = c("#404040", "#bababa")) +
-  theme_bw() +
+  theme_bw(base_size = 30) +
   theme(aspect.ratio = 1,
         legend.position = "top",
         legend.title = element_blank(),
