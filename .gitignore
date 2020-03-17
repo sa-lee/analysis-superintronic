@@ -4,3 +4,4 @@
 fastq/
 data-raw/
 cache/
+data/*.xlsx
