@@ -6,8 +6,8 @@ Authors@R: person("Stuart", "Lee", email = "lee.s@wehi.edu.au",
 Description: Analysis scripts and data for Lee, Zhang et al. paper
 Depends: R (>= 3.6.0)
 Imports:
-    plyranges,
-    superintronic,
+    plyranges (>= 1.7.15),
+    superintronic (>= 0.99.4),
     IsoformSwitchAnalyzeR,
     GenomeInfoDb,
     S4Vectors,
@@ -28,7 +28,6 @@ Imports:
     mgcv
 Remotes:
     sa-lee/superintronic,
-    thomasp85/patchwork,
     shians/index
 RoxygenNote: 6.1.1
 Encoding: UTF-8
