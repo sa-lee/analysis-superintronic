@@ -40,18 +40,23 @@ pretty_cov_plot <- function(cvg, parts, target, design = NULL, alpha = FALSE, ..
     labs(subtitle = paste("Coverage over", target$gene_name),
          y = "Log coverage"
     ) +
-    theme_bw(base_size = 30) +
+    theme_bw(base_size = 20) +
     theme(axis.text.x = element_blank(),
           axis.ticks.x = element_blank(),
-          strip.text = element_text(hjust = 0, size = 8),
+          strip.text = element_text(hjust = 0, size = 16),
+          axis.text.y = element_text(size = 12),
           strip.background = element_blank()) +
     expand_limits(y = 0)
   
-  segments <- superintronic:::flatten_parts(target)
-  track <- view_segments(segments, color = feature_type) +
-    theme_bw(base_size = 30)
-    theme(axis.text.x = element_text(size = 8))
-  
+  segments <- superintronic::unnest_parts(target)
+  track <- superintronic::view_segments(segments, colour = feature_type) +
+    scale_colour_brewer(palette = "Dark2") +
+    theme_bw(base_size = 20) +
+    theme(axis.text.y = element_blank(),
+          axis.ticks.y = element_blank(),
+          axis.title = element_blank(),
+          axis.text.x = element_text(size = 12),
+          panel.grid = element_blank()) 
   patchwork::wrap_plots(p, 
                         track, 
                         ncol = 1, 
@@ -78,14 +83,14 @@ set_plot_rng <- function(cvg, target, design, alpha) {
     cvg_rng <- plyranges::mutate(cvg_rng,
                                  log_score = log2(score + 0.5),
                                  strand = BiocGenerics::strand(target),
-                                 var = paste0("Kit: ", Kit, " Cellline: ", CellLine))
+                                 var = paste(Kit, CellLine))
   }
   
   if (is(cvg, "GRanges")) {
     cvg_rng <- plyranges::filter_by_overlaps(cvg, target)
     cvg_rng <- plyranges::mutate(cvg_rng, 
                                  strand = BiocGenerics::strand(target),
-                                 var = paste0("Kit: ", Kit, " Cellline: ", CellLine))
+                                 var = paste(Kit, CellLine))
   }
   
   if (alpha) {

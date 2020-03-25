@@ -9,14 +9,14 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, fig.path = here::here("img/"))
-library(dplyr)
+library(plyranges)
 parts <- readRDS(here::here("data", "complete-annotation.rds"))
 
 hits <- readRDS(here::here("data", "superintronic-hits.rds"))
 
 parts_tbl <- parts %>% 
-  plyranges::select(gene_id, gene_name, .drop_ranges = TRUE) %>% 
-  as_tibble()
+  select(gene_id, gene_name, .drop_ranges = TRUE) %>% 
+  tibble::as_tibble()
 
 source(here::here("R/prettycov.R"))
 ```
@@ -27,6 +27,7 @@ source(here::here("R/prettycov.R"))
 * superintronic run on all kits in each of the HCC827 and NCIH1975 celllines
 ```{r si-sets}
 # only polyA results
+library(dplyr)
 polyA_sets <- hits %>%
   filter(Kit == "polyA") %>% 
   distinct(gene_id) %>%
@@ -75,17 +76,14 @@ index_res <- res %>%
 index_res
 ```
 
-For the methods that provide a statistical test (not superintronic),
-we have taken the genes with a differential intronic region at an FDR of 0.05. 
+Using index, we specify a cut-off on differential intron counts at an 
+FDR of 0.01. 
 
-Note that these comparisons are not quite fair since the gene sets selected
-by each method after filtering are slighty different. Nonetheless we can
-visualise the overlap using an UpSet plot. 
 
 ## index sets overlapping total RNA comparisons
 
 All hits discovered by superintronic except for 19 genes are 
-obtained by the index analysis. 
+obtained by the index analysis using the beforementioned FDR threshold. 
 
 ```{r index_olap}
 library(UpSetR)
@@ -94,29 +92,41 @@ dex_set <- index_res %>%
   mutate_at(vars(index, starts_with("superintronic")), 
             .funs = ~ if_else(is.na(.), 0L, .)) 
 
-upset(as.data.frame(dex_set))
+dex_upset <- upset(as.data.frame(dex_set))
+dex_upset
+```
+
+```{r index-upset-1, include = FALSE}
+pdf(here::here("img", "index-superintronic-olaps-fdr_0.01.pdf"))
+print(dex_upset)
+dev.off()
 ```
 
 How many genes in DEList overlap with HCC287 total RNA = 13 
 How many genes in DEList overlap with NCIH1975 total RNA = 16
 How many genes overlap between the overlapping genes = 12.  
 
-If we look at the direction of the logFC  when there is overlap, the
-superintronic results are concordant (the design matrix has contrasts where
-up is:
+If we look at the direction of the log fold-change  when there is overlap, the
+superintronic results are concordant (the  index run has contrasts where
+upregulated is comparing NCIH1975 to HCC827)
 
 ```{r}
 dex_set %>% 
   count(`superintronic:HCC287_total-RNA`, 
         `superintronic:NCIH1975_total-RNA`, 
-        sign(logfc)) %>% 
+        index_sign = sign(logfc)) %>% 
   filter(`superintronic:HCC287_total-RNA` != 0 | 
-           `superintronic:NCIH1975_total-RNA` != 0)
+           `superintronic:NCIH1975_total-RNA` != 0,
+         !is.na(index_sign))
 ```
 
-## Coverage plots for intron+/-
+## Coverage plots for intron +/-
 
-```{r}
+Next we look at the index category for `intron+-`, we first produce coverage
+plots for the top 10 genes, ordered by t-statistic values. We do this over the
+full design, instead of the just the total-RNA samples.
+
+```{r intron-plus-minus}
 # sort by t-statistic
 intron_plus_minus <- res %>% 
   filter(grepl("Intron", classification), adj.P.Val < 0.01) %>%
@@ -127,17 +137,36 @@ top10_genes <- intron_plus_minus %>%
   select(gene_id =  GeneID, classification) %>% 
   mutate_all(as.character)
 
+top10_genes
+```
 
+```{r read-rds, echo = FALSE}
 cvg_over_features <- readRDS(here::here("data","complete-coverage.rds")) 
 design <- readRDS(here::here("data", "design.rds"))
+```
 
+```{r cov-plots, warning = FALSE, echo = FALSE, message = FALSE, fig.width = 8}
+library(ggplot2)
 for (i in seq_len(nrow(top10_genes))) {
   current <-  top10_genes[i,]
   track_plot <- pretty_cov_plot(cvg_over_features, 
                                 parts,
                                 current,
                                 design,
-                                heights = c(4, 0.25))
+                                heights = c(4, 1/4))
+  print(track_plot)
+  out_name <- paste0(current$gene_id, "-", 
+                     tolower(current$classification),
+                     "_index_coverage.pdf")
+  ggsave(here::here("img", out_name), 
+         track_plot,
+         width = 8, 
+         units = "in")
 }
-
 ```
+
+
+
+
+
+
