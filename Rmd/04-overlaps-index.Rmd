@@ -1,14 +1,18 @@
 ---
-title: "Overlaps with InDeX classifications"
+title: "Overlaps with index classifications"
 author: "Stuart Lee"
 date: "`r Sys.Date()`"
 output: 
   bookdown::html_document2:
     toc: true
+    number_sections: false
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, fig.path = here::here("img/"))
+knitr::opts_chunk$set(echo = TRUE, 
+                      message = FALSE,
+                      warning = FALSE,
+                      fig.path = here::here("img/"))
 library(plyranges)
 parts <- readRDS(here::here("data", "complete-annotation.rds"))
 
@@ -167,6 +171,81 @@ for (i in seq_len(nrow(top10_genes))) {
 
 
 
+## Overlaps with index classifications
+
+Next we look at the overlaps between superintronic results
+and all the  index classifications. Wen see there is only
+gene classified by superintronic, that doesn't come up as a hit
+in any of the index categories.  
+
+```{r classification-set, echo = FALSE}
+complete_set <- res %>%
+  select(gene_id = GeneID, 
+         index_pval = adj.P.Val, 
+         logfc = logFC, 
+         classification) %>% 
+  filter(nchar(classification) > 0) %>% 
+  mutate(index = 1L) %>% 
+  tidyr::pivot_wider(names_from = classification,
+                     values_from = index) %>%
+  full_join(totalRNA_sets) %>%
+  # rename(`HCC287 total RNA` = `superintronic:HCC287_total-RNA`,
+  #        `NCIH1975 total RNA` = `superintronic:NCIH1975_total-RNA`) %>% 
+  mutate_at(vars(-gene_id:-logfc, -gene_name),
+            .funs = ~ if_else(is.na(.), 0L, .))
+
+all_classification_upset <- upset(as.data.frame(complete_set),
+                                  nsets = 10,
+                                  text.scale = 0.7)
+all_classification_upset
+```
+
+The remaining results make sense, most superintronic results fall into either `+` or `-` categories, or the intron `+/-` categories, while
+a few fall into the remaining categories.
+
+```{r index-upset-2, include = FALSE}
+pdf(here::here("img", "index-categories-superintronic-olaps.pdf"))
+print(all_classification_upset)
+dev.off()
+```
 
 
+Below we show a table, with the proportion of superintronic hits
+for each CellLine within each category. In the tables, missing
+values indicate the result was unique to superintronic.
 
+These are the proportions for HCC287 cellline hits:
+
+```{r, echo = FALSE}
+by_category <- res %>%
+  select(gene_id = GeneID, 
+         index_pval = adj.P.Val, 
+         logfc = logFC, 
+         classification) %>% 
+  filter(nchar(classification) > 0) %>% 
+    full_join(totalRNA_sets) %>%
+  mutate_at(vars(-gene_id:-classification, -gene_name),
+            .funs = ~ if_else(is.na(.), 0L, .)) %>% 
+  group_by(classification)
+
+by_category %>% 
+  filter(`superintronic:HCC287_total-RNA` == 1) %>% 
+  count() %>% 
+  ungroup() %>% 
+  mutate(proportion = n / sum(n)) %>% 
+  arrange(desc(proportion))
+```
+We see that again the results make sense, where most classifications
+fall into minus categories.
+
+```{r, echo = FALSE}
+by_category %>% 
+  filter(`superintronic:NCIH1975_total-RNA` == 1) %>% 
+  count() %>% 
+  ungroup() %>% 
+  mutate(proportion = n / sum(n)) %>% 
+  arrange(desc(proportion))
+```
+
+Likewise, the proportions for NCIH1975 hits, show that most hits
+fall into the plus category, which makes sense. 
