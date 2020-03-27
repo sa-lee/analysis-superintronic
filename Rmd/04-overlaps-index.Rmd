@@ -164,7 +164,8 @@ for (i in seq_len(nrow(top10_genes))) {
                      "_index_coverage.pdf")
   ggsave(here::here("img", out_name), 
          track_plot,
-         width = 8, 
+         width = 8,
+         height = 12,
          units = "in")
 }
 ```
@@ -210,6 +211,7 @@ dev.off()
 ```
 
 
+
 Below we show a table, with the proportion of superintronic hits
 for each CellLine within each category. In the tables, missing
 values indicate the result was unique to superintronic.
@@ -249,3 +251,36 @@ by_category %>%
 
 Likewise, the proportions for NCIH1975 hits, show that most hits
 fall into the plus category, which makes sense. 
+
+
+## Coverage over shared intron +/- hits
+
+
+```{r, echo = FALSE}
+si_olaps <- complete_set %>% 
+  filter(`Intron+` == 1 | `Intron-` == 1, 
+         `superintronic:HCC287_total-RNA` == 1, 
+         `superintronic:NCIH1975_total-RNA` == 1) %>% 
+  select(gene_id, gene_name, starts_with("Intron")) %>% 
+  tidyr::pivot_longer(cols = -gene_id:-gene_name, 
+                      names_to = "classification") %>% 
+  filter(value == 1)
+
+for (i in seq_len(nrow(si_olaps))) {
+  current <-  si_olaps[i,]
+  track_plot <- pretty_cov_plot(cvg_over_features, 
+                                parts,
+                                current,
+                                design,
+                                heights = c(4, 1/4))
+  print(track_plot)
+  out_name <- paste0(current$gene_id, "-", 
+                     tolower(current$classification),
+                     "_index_coverage.pdf")
+  ggsave(here::here("img", out_name), 
+         track_plot,
+         width = 8,
+         height = 12,
+         units = "in")
+}
+```
