@@ -109,9 +109,9 @@ set_plot_rng <- function(cvg, target, design, alpha) {
   return(cvg_rng)
 }
 
-.default_theme <-     theme(axis.title.x = element_blank(),
-                            axis.text.x = element_blank(),
-                            axis.ticks.x = element_blank(),
-                            strip.text = element_text(hjust = 0, size = 16),
-                            axis.text.y = element_text(size = 12),
-                            strip.background = element_blank())
+.default_theme <- ggplot2::theme(axis.title.x = ggplot2::element_blank(),
+                                 axis.text.x = ggplot2::element_blank(),
+                                 axis.ticks.x = ggplot2::element_blank(),
+                                 strip.text = ggplot2::element_text(hjust = 0, size = 16),
+                                 axis.text.y = ggplot2::element_text(size = 12),
+                                 strip.background = ggplot2::element_blank())
