@@ -44,11 +44,14 @@ cvg2 <- sort(cvg2)
 
 # reshape via superintronic
 by_gene <- cvg2 %>% 
-  split_ranges(gene_id)
+  group_by(gene_id) %>% 
+  dplyr::group_split()
 
 
 # for each gene section it into twenty bins
 library(BiocParallel)
+register(MulticoreParam(workers = 4))
+
 bins <- bplapply(by_gene, 
                function(.x) {
                  unlist(
@@ -101,20 +104,20 @@ tbl <- bin_means %>%
          feature_type = factor(feature_type, levels = c("intron", "exon"))) 
 
 fig3a <- ggplot(tbl, aes(x = bin, y = lumpy, colour = Kit, group = Sample)) +
-  geom_line() +
+  geom_line(size = 1) +
   facet_grid(feature_type ~ cat, scales = "free_y") +
+  scale_x_continuous(limits = c(1,20)) +
   scale_color_manual(values = c("#404040", "#bababa")) +
-  theme_bw(base_size = 30) +
+  theme_bw(base_size = 20) +
   theme(aspect.ratio = 1,
-        legend.position = "top",
+        legend.position = "bottom",
         legend.title = element_blank(),
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank()
+        panel.grid = element_blank()
         ) +
   labs(y = "Relative Log-coverage", 
-       x = "5'---Genebody---3'")
+       x = "Bin (Oriented 5' to 3')")
 
-ggsave(here::here("img", "Fig3a.pdf"), fig3a, height = 12, width = 16)  
+ggsave(here::here("img", "Fig3a.pdf"), fig3a)  
 
 
 source(here::here("R", "prettycov.R"))
@@ -136,10 +139,10 @@ long <- lapply(3:4, function(.x) pretty_cov_plot(cvg, parts,
 
 fig3b <- patchwork::wrap_plots(short, long, nrow = 2, guides = "keep")
 
-ggsave(here::here("img", "Fig3b.pdf"), fig3b, height = 12, width = 16)  
+ggsave(here::here("img", "Fig3b.pdf"), fig3b)  
 
-fig3 <- patchwork::wrap_plots(fig3a, fig3b, ncol = 2, guides = "keep",
-                              widths = c(3,4.75))
-
-ggsave(here::here("img", "Fig3.png"), fig3, width = 16, height = 8, 
-       dpi = "retina")
+# fig3 <- patchwork::wrap_plots(fig3a, fig3b, ncol = 2, guides = "keep",
+#                               widths = c(3,4.75))
+# 
+# ggsave(here::here("img", "Fig3.png"), fig3, width = 16, height = 8, 
+#        dpi = "retina")

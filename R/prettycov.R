@@ -41,7 +41,8 @@ pretty_cov_plot <- function(cvg, parts, target, design = NULL, alpha = FALSE, ..
          y = "Log coverage"
     ) +
     theme_bw(base_size = 20) +
-    theme(axis.text.x = element_blank(),
+    theme(axis.title.x = element_blank(),
+          axis.text.x = element_blank(),
           axis.ticks.x = element_blank(),
           strip.text = element_text(hjust = 0, size = 16),
           axis.text.y = element_text(size = 12),
@@ -55,7 +56,7 @@ pretty_cov_plot <- function(cvg, parts, target, design = NULL, alpha = FALSE, ..
     theme(axis.text.y = element_blank(),
           axis.ticks.y = element_blank(),
           axis.title = element_blank(),
-          axis.text.x = element_text(size = 12),
+          axis.text.x = element_text(size = 8),
           panel.grid = element_blank()) 
   patchwork::wrap_plots(p, 
                         track, 
@@ -100,8 +101,8 @@ set_plot_rng <- function(cvg, target, design, alpha) {
     
     cvg_rng <- plyranges::mutate(cvg_rng,
                                  alpha = dplyr::case_when(
-                                   score > 3 & feature == "intron" ~ 1,
-                                   score <= 3 & feature == "intron"~ 0.5,
+                                   log_score > 3 & feature_type == "intron" ~ 1,
+                                   log_score <= 3 & feature_type == "intron"~ 0.5,
                                    TRUE ~ 1
                                  ))
   }
