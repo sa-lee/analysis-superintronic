@@ -23,8 +23,7 @@ cvg <- cvg[design$Sample]
 
 
 targets <- filter(parts, 
-                  gene_name %in% c("NBEAL2", "HNRNPL", "RPS27A")
-) %>% 
+                  gene_name %in% c("NBEAL2", "HNRNPL", "RPS27A")) %>% 
   select(gene_id, gene_name) %>% 
   as.data.frame()
 
