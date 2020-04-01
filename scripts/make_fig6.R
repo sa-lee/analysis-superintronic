@@ -12,7 +12,6 @@ library(superintronic)
 library(ggplot2)
 source(here::here("R", "prettycov.R"))
 
-
 # previously obtained coverage and design
 design <- readRDS(here::here("data", "design.rds"))
 parts <- readRDS(here::here("data", "complete-annotation.rds"))
@@ -31,12 +30,21 @@ targets <- filter(parts,
 
 targets <- targets[c(3,1,2),]
 
+.custom_theme <- theme(axis.title.x = element_blank(),
+                       axis.text.x = element_blank(),
+                       axis.ticks.x = element_blank(),
+                       strip.text = element_text(hjust = 0, size = 10),
+                       axis.text.y = element_text(size = 8),
+                       strip.background = element_blank())
+
 
 fig6_plots <- lapply(seq_len(nrow(targets)),
                      function(.x) pretty_cov_plot(cvg, parts, targets[.x,], 
                                                   design, 
+                                                  base_size = 12,
+                                                  cvg_theme = .custom_theme,
                                                   heights = c(2, 0.25)))
 
-fig6 <- patchwork::wrap_plots(fig6_plots, ncol = 1, guides = "keep")
+fig6 <- patchwork::wrap_plots(fig6_plots, ncol = 3)
 
-ggsave(here::here("img/Fig6.pdf"), fig6, height = 6, width = 10)
+ggsave(here::here("img/Fig6.pdf"), fig6, width = 11)
