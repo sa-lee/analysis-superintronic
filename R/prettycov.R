@@ -5,6 +5,8 @@
 #' @param target Region of interest as GRanges or data.frame
 #' @param alpha (Make low coverage regions transparent?) Default is FALSE
 #' @param ... Other options passed to `patchwork::wrap_plots()`
+#' @param base_size Default font size for tracks
+#' @param cvg_theme a ggplot2 theme for control appearance 
 #' 
 #' @import ggplot2 GenomicRanges plyranges superintronic S4Vectors
 #' @importFrom dplyr case_when
@@ -12,7 +14,9 @@
 #' @importFrom patchwork wrap_plots
 #' @importFrom BiocGenerics strand mean unique
 #' @export
-pretty_cov_plot <- function(cvg, parts, target, design = NULL, alpha = FALSE, ...) {
+pretty_cov_plot <- function(cvg, parts, target, 
+                            design = NULL, alpha = FALSE, 
+                            base_size = 20, cvg_theme = .default_theme , ...) {
   
   if(is(target, "data.frame")) {
     target <- plyranges::filter(parts, gene_id == !!target$gene_id)
@@ -40,19 +44,14 @@ pretty_cov_plot <- function(cvg, parts, target, design = NULL, alpha = FALSE, ..
     labs(subtitle = paste("Coverage over", target$gene_name),
          y = "Log coverage"
     ) +
-    theme_bw(base_size = 20) +
-    theme(axis.title.x = element_blank(),
-          axis.text.x = element_blank(),
-          axis.ticks.x = element_blank(),
-          strip.text = element_text(hjust = 0, size = 16),
-          axis.text.y = element_text(size = 12),
-          strip.background = element_blank()) +
+    theme_bw(base_size = base_size) +
+    cvg_theme +
     expand_limits(y = 0)
   
   segments <- superintronic::unnest_parts(target)
   track <- superintronic::view_segments(segments, colour = feature_type) +
     scale_colour_brewer(palette = "Dark2") +
-    theme_bw(base_size = 20) +
+    theme_bw(base_size = base_size) +
     theme(axis.text.y = element_blank(),
           axis.ticks.y = element_blank(),
           axis.title = element_blank(),
@@ -109,3 +108,10 @@ set_plot_rng <- function(cvg, target, design, alpha) {
   
   return(cvg_rng)
 }
+
+.default_theme <-     theme(axis.title.x = element_blank(),
+                            axis.text.x = element_blank(),
+                            axis.ticks.x = element_blank(),
+                            strip.text = element_text(hjust = 0, size = 16),
+                            axis.text.y = element_text(size = 12),
+                            strip.background = element_blank())
