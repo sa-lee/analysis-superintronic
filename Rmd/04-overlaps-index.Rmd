@@ -377,6 +377,42 @@ ans <- nmd_combine  %>%
 ans
 ```
 
-## Overlaps with split reads
+## Overlaps with intronic split reads
 
 
+We have a DGEList containing split reads over intronic parts of a gene
+for the total RNA samples, we show how many genes have greater than 10
+intron split reads on average accross samples within a gene:
+
+```{r read-splits, echo = FALSE}
+sr_dge <- readRDS(here::here("data", "split_reads_intron_dgelist.rds"))
+
+split_counts <- sr_dge$counts
+
+totals <- tibble::tibble(
+  gene_id = rownames(split_counts),
+  count = unname(rowMeans(split_counts))
+) %>% 
+  group_by(gene_id) %>% 
+  summarise(total_over_ten = sum(count >= 10)) %>% 
+  mutate(over_ten = as.integer(total_over_ten > 0))
+count(totals, over_ten)
+```
+
+```{r split-totals}
+split_set <- totals %>% 
+  full_join(dex_set) %>% 
+  select(gene_id, over_ten, index, `superintronic:HCC287_total-RNA`) %>% 
+  mutate_at(vars(-gene_id), 
+            .funs = ~ if_else(is.na(.), 0L, .))
+
+intron_split <- upset(as.data.frame(split_set))
+intron_split
+```
+
+
+```{r split-plot, include = FALSE}
+pdf(here::here("img","index_classifications", "split-reads-index-superintronic-olaps.pdf"))
+print(intron_split)
+dev.off()
+```
