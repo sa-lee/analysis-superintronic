@@ -12,7 +12,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE, 
                       message = FALSE,
                       warning = FALSE,
-                      fig.path = here::here("img/"))
+                      fig.path = here::here("img/index_classifications/"))
 library(plyranges)
 parts <- readRDS(here::here("data", "complete-annotation.rds"))
 
@@ -101,7 +101,7 @@ dex_upset
 ```
 
 ```{r index-upset-1, include = FALSE}
-pdf(here::here("img", "index-superintronic-olaps-fdr_0.01.pdf"))
+pdf(here::here("img", "index_classifications", "index-superintronic-olaps-fdr_0.01.pdf"))
 print(dex_upset)
 dev.off()
 ```
@@ -162,7 +162,8 @@ for (i in seq_len(nrow(top10_genes))) {
   out_name <- paste0(current$gene_id, "-", 
                      tolower(current$classification),
                      "_index_coverage.pdf")
-  ggsave(here::here("img", out_name), 
+  ggsave(here::here("img",
+                    "index_classifications", out_name), 
          track_plot,
          width = 8,
          height = 12,
@@ -205,7 +206,7 @@ The remaining results make sense, most superintronic results fall into either `+
 a few fall into the remaining categories.
 
 ```{r index-upset-2, include = FALSE}
-pdf(here::here("img", "index-categories-superintronic-olaps.pdf"))
+pdf(here::here("img", "index_classifications", "index-categories-superintronic-olaps.pdf"))
 print(all_classification_upset)
 dev.off()
 ```
@@ -277,7 +278,7 @@ for (i in seq_len(nrow(si_olaps))) {
   out_name <- paste0(current$gene_id, "-", 
                      tolower(current$classification),
                      "_index_coverage.pdf")
-  ggsave(here::here("img", out_name), 
+  ggsave(here::here("img", "index_classifications", out_name), 
          track_plot,
          width = 8,
          height = 12,
@@ -353,7 +354,29 @@ nmd_sets
 ```
 
 ```{r save-plot, include = FALSE}
-pdf(here::here("img", "nmd-superintronic-olaps.pdf"))
+pdf(here::here("img","index_classifications", "nmd-superintronic-olaps.pdf"))
 print(nmd_sets)
 dev.off()
 ```
+
+```{r}
+ans <- nmd_combine  %>% 
+  filter(nmd == 1) %>%
+  tidyr::pivot_longer(cols = c(-gene_id, -adj_pvalue, -number, -index_pval, -logfc,-nmd),
+                      names_to = "classification") %>% 
+  group_by(classification) %>% 
+  summarise(count = sum(value)) %>% 
+  inner_join(count(res, classification)) %>% 
+  tidyr::separate(classification, into = c("classification", "other")) %>% 
+  select(-other) %>% 
+  group_by(classification) %>% 
+  summarise(nmd_count = sum(count),total_count = sum(n)) %>% 
+  mutate(proportion = nmd_count / total_count,
+         classification = if_else(nchar(classification) == 0, "+/-", classification)) %>% 
+  arrange(desc(proportion))
+ans
+```
+
+## Overlaps with split reads
+
+
