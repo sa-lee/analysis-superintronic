@@ -70,7 +70,7 @@ x <- index_analysis(exon, intron, group)
 
 res <- x$tops$intron %>% 
   mutate(classification = x$category) %>% 
-  as_tibble()
+  tibble::as_tibble()
 
 index_res <- res %>% 
   filter(adj.P.Val < 0.01) %>% 
@@ -300,7 +300,7 @@ We read in supplementary material via their provided excel spreadsheet
 and restrict down to the gene_id and their final P-value used to select
 targets.
 
-```{r nmd-reads}
+```{r nmd-reads, warning = FALSE}
 library(readxl)
 nmd_targets <- read_xlsx(
   here::here("data", "colombo-nmd-targets.xlsx"), 
@@ -314,14 +314,18 @@ We count how many genes there were at a P-value threshold of 0.05
 count(nmd_targets, adj_pvalue < 0.05)
 ```
 
-We then take these results and produce an UpSet plot as we had before:
+We then take these results and produce a similar UpSet plot
+to what we had before, combining the index classifications:
 ```{r, echo = TRUE}
-index_hits <- res %>%
+index_hits <-res %>%
   select(gene_id = GeneID, 
          index_pval = adj.P.Val, 
          logfc = logFC, 
          classification) %>% 
   filter(nchar(classification) > 0) %>% 
+  mutate(index = 1L) %>% 
+  tidyr::pivot_wider(names_from = classification,
+                     values_from = index) %>% 
   tidyr::separate(col = c("gene_id"), 
                   into = c("gene_id", "number"), 
                   sep = "\\.")
@@ -331,8 +335,8 @@ nmd_targets_filtered <- nmd_targets %>%
   mutate(nmd = 1L)
 
 nmd_combine <-   nmd_targets_filtered %>% 
-  full_join(si_hits) %>%
-  mutate_at(vars(-gene_id, -adj_pvalue, -number, -gene_name),
+  full_join(index_hits) %>%
+  mutate_at(vars(-gene_id, -adj_pvalue, -number, -index_pval, -logfc),
             .funs = ~ if_else(is.na(.), 0L, .))
 
 
@@ -342,12 +346,13 @@ nmd_combine <-   nmd_targets_filtered %>%
 ```{r, echo = FALSE}
 nmd_sets <- nmd_combine %>% 
   select_if(is.integer) %>% 
+  rename(`NMD targets` = nmd) %>% 
   as.data.frame() %>% 
-  upset()
+  upset(nsets = 10)
 nmd_sets
 ```
 
-```{r save-plot}
+```{r save-plot, include = FALSE}
 pdf(here::here("img", "nmd-superintronic-olaps.pdf"))
 print(nmd_sets)
 dev.off()
