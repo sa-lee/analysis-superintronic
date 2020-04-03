@@ -202,7 +202,7 @@ all_classification_upset <- upset(as.data.frame(complete_set),
 all_classification_upset
 ```
 
-The remaining results make sense, most superintronic results fall into either `+` or `-` categories, or the intron `+/-` categories, while
+The remaining results make sense, most superintronic results fall into either `+` or `-` categories
 a few fall into the remaining categories.
 
 ```{r index-upset-2, include = FALSE}
@@ -210,7 +210,6 @@ pdf(here::here("img", "index_classifications", "index-categories-superintronic-o
 print(all_classification_upset)
 dev.off()
 ```
-
 
 
 Below we show a table, with the proportion of superintronic hits
@@ -238,8 +237,8 @@ by_category %>%
   mutate(proportion = n / sum(n)) %>% 
   arrange(desc(proportion))
 ```
-We see that again the results make sense, where most classifications
-fall into minus categories.
+Likewise, the NCIH1975 results make sense, we see that again the results make sense, 
+where most classifications fall into plus categories.
 
 ```{r, echo = FALSE}
 by_category %>% 
@@ -309,10 +308,10 @@ nmd_targets <- read_xlsx(
 ) %>% 
   select(gene_id = gene, adj_pvalue = meta_meta) 
 ```
-We count how many genes there were at a P-value threshold of 0.05
+We count how many genes there were at a P-value threshold of 0.01
 
 ```{r}
-count(nmd_targets, adj_pvalue < 0.05)
+count(nmd_targets, adj_pvalue < 0.01)
 ```
 
 We then take these results and produce a similar UpSet plot
@@ -332,7 +331,7 @@ index_hits <-res %>%
                   sep = "\\.")
 
 nmd_targets_filtered <- nmd_targets %>% 
-  filter(adj_pvalue < 0.05) %>% 
+  filter(adj_pvalue < 0.01) %>% 
   mutate(nmd = 1L)
 
 nmd_combine <-   nmd_targets_filtered %>% 
