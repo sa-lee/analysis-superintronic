@@ -9,7 +9,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,
-                      fig.path = here::here("img/"))
+                      fig.path = here::here("img", "method_overlaps/"))
 library(dplyr)
 parts <- readRDS(here::here("data", "complete-annotation.rds"))
 
@@ -139,7 +139,7 @@ exon <- readRDS(system.file("extdata/exon_dge.Rds", package = "index"))
 intron <- readRDS(system.file("extdata/intron_dge.Rds", package = "index"))
 group <- readRDS(system.file("extdata/group.Rds", package = "index"))
 
-x <- index_analysis(exon, intron, group)
+x <- index_analysis(exon, intron, group, p.value = 0.01)
 
 index_res <- x$tops$intron %>% 
   filter(adj.P.Val < 0.01) %>% 
