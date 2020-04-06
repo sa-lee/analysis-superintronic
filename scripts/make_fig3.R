@@ -101,7 +101,7 @@ tbl <- bin_means %>%
   summarise(lumpy = mean(mn), bumpy = var(mn)) %>% 
   ungroup() %>% 
   mutate(Kit = gsub("R[1-3]_HCC287_", "", Sample),
-         feature_type = factor(feature_type, levels = c("intron", "exon"))) 
+         feature_type = factor(feature_type, levels = c("exon", "intron"))) 
 
 fig3a <- ggplot(tbl, aes(x = bin, y = lumpy, colour = Kit, group = Sample)) +
   geom_line(size = 1) +
@@ -117,7 +117,7 @@ fig3a <- ggplot(tbl, aes(x = bin, y = lumpy, colour = Kit, group = Sample)) +
   labs(y = "Relative Log-coverage", 
        x = "Bin (Oriented 5' to 3')")
 
-ggsave(here::here("img", "Fig3a.pdf"), fig3a)  
+ggsave(here::here("img", "Fig3a.pdf"), fig3a, width = 11)  
 
 
 source(here::here("R", "prettycov.R"))
@@ -128,18 +128,33 @@ targets <- filter(parts,
                                  "ENSG00000196937.10", "ENSG00000196428.12")
 )
 
+.custom_theme <- theme(axis.title.x = element_blank(),
+                       axis.text.x = element_blank(),
+                       axis.ticks.x = element_blank(),
+                       strip.text = element_text(hjust = 0, size = 10),
+                       axis.text.y = element_text(size = 8),
+                       strip.background = element_blank())
+
 short <- lapply(1:2, 
                 function(.x) pretty_cov_plot(cvg, parts, 
-                                             targets[.x,], alpha = TRUE, heights = c(2, 0.25))) %>% 
+                                             targets[.x,], 
+                                             alpha = TRUE, 
+                                             base_size = 12,
+                                             cvg_theme = .custom_theme,
+                                             heights = c(2, 0.25))) %>% 
   patchwork::wrap_plots(ncol = 2, guides = "keep")
 
 long <- lapply(3:4, function(.x) pretty_cov_plot(cvg, parts, 
-                                                 targets[.x,], alpha = TRUE, heights = c(2, 0.25))) %>% 
+                                                 targets[.x,], 
+                                                 alpha = TRUE, 
+                                                 base_size = 12,
+                                                 cvg_theme = .custom_theme,
+                                                 heights = c(2, 0.25))) %>% 
   patchwork::wrap_plots(ncol = 2, guides = "keep")
 
 fig3b <- patchwork::wrap_plots(short, long, nrow = 2, guides = "keep")
 
-ggsave(here::here("img", "Fig3b.pdf"), fig3b)  
+ggsave(here::here("img", "Fig3b.pdf"), fig3b, width = 11)  
 
 # fig3 <- patchwork::wrap_plots(fig3a, fig3b, ncol = 2, guides = "keep",
 #                               widths = c(3,4.75))

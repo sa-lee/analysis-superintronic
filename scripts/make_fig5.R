@@ -36,6 +36,7 @@ plot_lists <- lapply(gene_names, function(.x) {
 })
 
 
-fig <- wrap_plots(plot_lists, nrow= 1)
+fig <- wrap_plots(plot_lists, ncol = 3, guides = "keep")
 
-ggsave(here::here("img/Fig5.pdf"), fig, width = 11)
+
+ggsave(here::here("img/Fig5.pdf"), fig, width = 13, height = 3.3)

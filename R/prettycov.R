@@ -29,7 +29,9 @@ pretty_cov_plot <- function(cvg, parts, target,
                 aes(x = start, xend = end, y = 0, yend = log_score)) +
       geom_segment(aes(colour = feature_type, alpha = alpha)) +
       superintronic:::rescale_by_width(cvg_rng) +
-      guides(alpha = FALSE)
+      guides(alpha = FALSE) +
+      facet_wrap(facets = dplyr::vars(var), ncol = 1)
+  
   } else {
     p <- superintronic::view_coverage(cvg_rng, 
                                       score = log_score, 
@@ -55,7 +57,7 @@ pretty_cov_plot <- function(cvg, parts, target,
     theme(axis.text.y = element_blank(),
           axis.ticks.y = element_blank(),
           axis.title = element_blank(),
-          axis.text.x = element_text(size = 8),
+          axis.text.x = element_text(size = 6),
           panel.grid = element_blank()) 
   patchwork::wrap_plots(p, 
                         track, 
@@ -98,7 +100,9 @@ set_plot_rng <- function(cvg, target, design, alpha) {
                                                   log_score = BiocGenerics::mean(log_score),
                                                   feature_type = unlist(BiocGenerics::unique(feature_type)))
     
+    
     cvg_rng <- plyranges::mutate(cvg_rng,
+                                 var = gsub("HCC827", "", var), # remove cellline reference here
                                  alpha = dplyr::case_when(
                                    log_score > 3 & feature_type == "intron" ~ 1,
                                    log_score <= 3 & feature_type == "intron"~ 0.5,
