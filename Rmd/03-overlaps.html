@@ -11,7 +11,7 @@
 
 <meta name="author" content="Stuart Lee" />
 
-<meta name="date" content="2020-04-03" />
+<meta name="date" content="2020-04-07" />
 
 <title>Overlapping hits between superintronic, index, ISA and IRfinder</title>
 
@@ -365,7 +365,7 @@ summary {
 
 <h1 class="title toc-ignore">Overlapping hits between superintronic, index, ISA and IRfinder</h1>
 <h4 class="author">Stuart Lee</h4>
-<h4 class="date">2020-04-03</h4>
+<h4 class="date">2020-04-07</h4>
 
 </div>
 
@@ -553,31 +553,15 @@ dex_set &lt;- index_res %&gt;%
 <p>How many genes in DEList overlap with HCC287 total RNA = 13
 How many genes in DEList overlap with NCIH1975 total RNA = 16
 How many genes overlap between the overlapping genes = 12.</p>
-<p>If we look at the direction of the logFC when there is overlap, the
-superintronic results are concordant (the design matrix has contrasts where
-up is:</p>
-<pre class="r"><code>dex_set %&gt;% 
-  count(`superintronic:HCC287_total-RNA`, 
-        `superintronic:NCIH1975_total-RNA`, 
-        sign(logfc)) %&gt;% 
-  filter(`superintronic:HCC287_total-RNA` != 0 | 
-           `superintronic:NCIH1975_total-RNA` != 0)</code></pre>
-<pre><code>## # A tibble: 7 x 4
-##   `superintronic:HCC287_total… `superintronic:NCIH1975_tota… `sign(logfc)`     n
-##                          &lt;int&gt;                         &lt;int&gt;         &lt;dbl&gt; &lt;int&gt;
-## 1                            0                             1             1    16
-## 2                            0                             1            NA     3
-## 3                            1                             0            -1    13
-## 4                            1                             0            NA     1
-## 5                            1                             1            -1    11
-## 6                            1                             1             1     1
-## 7                            1                             1            NA    15</code></pre>
 </div>
 <div id="compare-irfinder-and-isa" class="section level1">
 <h1><span class="header-section-number">3</span> Compare IRfinder and ISA</h1>
 <p>superintronic detects genes with IR (IR-like profiles).
-If a gene is detected in Group A and not B, we can loosely say that it has differential IR (DIR) in Group A and B. Similarly for Group B.</p>
-<p>Technically, a gene can be detected with IR in both Group A and B, but at different levels thus DIR – these genes are commonly detected in Group A and B, and are DE (see above)</p>
+If a gene is detected in Group A and not B, we can loosely say that it has
+differential IR (DIR) in Group A and B. Similarly for Group B.</p>
+<p>Technically, a gene can be detected with IR in both Group A and B, but at different
+evels thus DIR – these genes are commonly detected in Group A and B, and are DE
+(see above).</p>
 <pre class="r"><code>ir_sets &lt;- isa_sets %&gt;% 
   full_join(polyA_sets) %&gt;% 
   full_join(irf_ac) %&gt;% 
@@ -627,7 +611,7 @@ that are also DE in intron counts (any category), that overlap with ISA? No. </
 </div>
 <div id="comparing-libraries" class="section level1">
 <h1><span class="header-section-number">4</span> Comparing libraries</h1>
-<p>Results are mostly stable accross libraries.</p>
+<p>Results are mostly stable accross libraries for the cellline mixtures.</p>
 <pre class="r"><code>libraries &lt;- totalRNA_sets %&gt;% 
   full_join(polyA_sets) %&gt;% 
     mutate_at(vars(starts_with(&quot;superintronic&quot;)),

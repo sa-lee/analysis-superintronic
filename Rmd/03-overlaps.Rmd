@@ -9,7 +9,8 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,
-                      fig.path = here::here("img", "method_overlaps/"))
+                      fig.path = here::here("img", "method_overlaps/")
+                      )
 library(dplyr)
 parts <- readRDS(here::here("data", "complete-annotation.rds"))
 
@@ -86,7 +87,7 @@ totalRNA_sets
 
 * IRfinder using
   * the Audic and Claverie test
-```{r}
+```{r ir-ac}
 irf_ac <- ir_finder_ac %>% 
   left_join(parts_tbl, by = "gene_name") %>% 
   select(gene_id = gene_id.y, gene_name, adj_pval = p_diff) %>% 
@@ -94,7 +95,7 @@ irf_ac <- ir_finder_ac %>%
 ```
   
   * GLM test (one gene is dropped as it's no longer present in hg38 annotation)
-```{r}
+```{r ir-glm}
 irf_glm <- ir_finder_glm %>% 
   group_by(gene_name, gene_id) %>% 
   tidyr::nest() %>% 
@@ -119,7 +120,7 @@ irf_glm
   
 * IsoformSwitchAnalyzeR using the DEXSeq test
 
-```{r}
+```{r isa}
 isa_sets <- isa_hits %>%
   mutate(`IsoformSwitchAnalyzeR` = 1L) %>% 
   select(gene_id, 
@@ -133,7 +134,7 @@ isa_sets
 
 * index results 
 
-```{r}
+```{r run-index}
 library(index)
 exon <- readRDS(system.file("extdata/exon_dge.Rds", package = "index"))
 intron <- readRDS(system.file("extdata/intron_dge.Rds", package = "index"))
@@ -164,7 +165,7 @@ visualise the overlap using an UpSet plot.
 All hits discovered by superintronic except for 19 genes are 
 obtained by the index analysis. 
 
-```{r index_olap}
+```{r index_vs_superintronic}
 library(UpSetR)
 dex_set <- index_res %>% 
   full_join(totalRNA_sets) %>% 
@@ -178,29 +179,19 @@ How many genes in DEList overlap with HCC287 total RNA = 13
 How many genes in DEList overlap with NCIH1975 total RNA = 16
 How many genes overlap between the overlapping genes = 12.  
 
-If we look at the direction of the logFC  when there is overlap, the
-superintronic results are concordant (the design matrix has contrasts where
-up is:
-
-```{r}
-dex_set %>% 
-  count(`superintronic:HCC287_total-RNA`, 
-        `superintronic:NCIH1975_total-RNA`, 
-        sign(logfc)) %>% 
-  filter(`superintronic:HCC287_total-RNA` != 0 | 
-           `superintronic:NCIH1975_total-RNA` != 0)
-```
-
 
 # Compare IRfinder and ISA
 
 superintronic detects genes with IR (IR-like profiles). 
-If a gene is detected in Group A and not B, we can loosely say that it has differential IR (DIR) in Group A and B. Similarly for Group B.  
+If a gene is detected in Group A and not B, we can loosely say that it has 
+differential IR (DIR) in Group A and B. Similarly for Group B.  
  
-Technically, a gene can be detected with IR in both Group A and B, but at different levels thus DIR – these genes are commonly detected in Group A and B, and are DE (see above) 
+Technically, a gene can be detected with IR in both Group A and B, but at different 
+evels thus DIR – these genes are commonly detected in Group A and B, and are DE 
+(see above). 
 
 
-```{r ir_olaps}
+```{r overlaps_superintronic_vs_others}
 ir_sets <- isa_sets %>% 
   full_join(polyA_sets) %>% 
   full_join(irf_ac) %>% 
@@ -236,7 +227,7 @@ How many unique genes to NCIH1975 poly(A) overlap with ISA?
 
 Are there any common genes to both polyA celllines, that are also DE in intron counts (any category), that overlap with IRFinder? Yes, see below, there are three genes.
 
-```{r de_intron_sets}
+```{r overlaps_index_vs_others}
 de_sets <- index_res %>% 
   full_join(polyA_sets) %>% 
   full_join(irf_glm) %>% 
@@ -257,9 +248,9 @@ that are also DE in intron counts (any category), that overlap with ISA? No.
 
 # Comparing libraries
 
-Results are mostly stable accross libraries.
+Results are mostly stable accross libraries for the cellline mixtures.
 
-```{r library-olaps}
+```{r superintronic_library_olaps}
 libraries <- totalRNA_sets %>% 
   full_join(polyA_sets) %>% 
     mutate_at(vars(starts_with("superintronic")),
@@ -272,3 +263,10 @@ libraries %>%
 ```
 
 
+```{r knitr-fig-rename, include = FALSE}
+from <- list.files(path.expand(knitr::opts_chunk$get("fig.path")), 
+                   pattern = "-1.png$",
+                   full.names = TRUE)
+to <- gsub("-1", "", from)
+file.copy(from, to, overwrite = TRUE)
+```
