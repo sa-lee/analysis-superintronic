@@ -12,6 +12,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE, 
                       message = FALSE,
                       warning = FALSE,
+                      fig.keep = "none",
                       fig.path = here::here("img/index_classifications/"))
 library(plyranges)
 parts <- readRDS(here::here("data", "complete-annotation.rds"))
@@ -101,7 +102,7 @@ dex_upset
 ```
 
 ```{r index-upset-1, include = FALSE}
-pdf(here::here("img", "index_classifications", "index-superintronic-olaps-fdr_0.01.pdf"))
+png(here::here("img", "index_classifications", "overlaps_index_vs_superintronic.png"))
 print(dex_upset)
 dev.off()
 ```
@@ -145,8 +146,12 @@ top10_genes
 ```
 
 ```{r read-rds, echo = FALSE}
-cvg_over_features <- readRDS(here::here("data","complete-coverage.rds")) 
+cvg_over_features <- readRDS(here::here("data","complete-coverage.rds")) \
 design <- readRDS(here::here("data", "design.rds"))
+names(cvg) <- design$Sample
+
+design <- subset(design, Kit == "total-RNA") 
+cvg <- cvg[design$Sample]
 ```
 
 ```{r cov-plots, warning = FALSE, echo = FALSE, message = FALSE, fig.width = 8}
@@ -157,13 +162,15 @@ for (i in seq_len(nrow(top10_genes))) {
                                 parts,
                                 current,
                                 design,
-                                heights = c(4, 1/4))
+                                heights = c(2, 1/4))
   print(track_plot)
   out_name <- paste0(current$gene_id, "-", 
                      tolower(current$classification),
                      "_index_coverage.pdf")
   ggsave(here::here("img",
-                    "index_classifications", out_name), 
+                    "index_classifications",
+                    "top_intron_class_genes",
+                    out_name), 
          track_plot,
          width = 8,
          height = 12,
@@ -206,7 +213,7 @@ The remaining results make sense, most superintronic results fall into either `+
 a few fall into the remaining categories.
 
 ```{r index-upset-2, include = FALSE}
-pdf(here::here("img", "index_classifications", "index-categories-superintronic-olaps.pdf"))
+png(here::here("img", "index_classifications", "overlap_index_categories_vs_superintronic.png"))
 print(all_classification_upset)
 dev.off()
 ```
@@ -353,7 +360,7 @@ nmd_sets
 ```
 
 ```{r save-plot, include = FALSE}
-pdf(here::here("img","index_classifications", "nmd-superintronic-olaps.pdf"))
+png(here::here("img","index_classifications", "overlap_nmd_vs_index.png"))
 print(nmd_sets)
 dev.off()
 ```
@@ -411,7 +418,7 @@ intron_split
 
 
 ```{r split-plot, include = FALSE}
-pdf(here::here("img","index_classifications", "split-reads-index-superintronic-olaps.pdf"))
+png(here::here("img","index_classifications", "overlap_intron_split_reads.png"))
 print(intron_split)
 dev.off()
 ```
