@@ -102,7 +102,7 @@ dex_upset
 ```
 
 ```{r index-upset-1, include = FALSE}
-png(here::here("img", "index_classifications", "overlaps_index_vs_superintronic.png"))
+png(here::here("img", "index_classifications", "overlap_index_vs_superintronic.png"))
 print(dex_upset)
 dev.off()
 ```
