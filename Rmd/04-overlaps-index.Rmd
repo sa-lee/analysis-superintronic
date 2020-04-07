@@ -146,12 +146,12 @@ top10_genes
 ```
 
 ```{r read-rds, echo = FALSE}
-cvg_over_features <- readRDS(here::here("data","complete-coverage.rds")) \
+cvg_over_features <- readRDS(here::here("data","complete-coverage.rds")) 
 design <- readRDS(here::here("data", "design.rds"))
-names(cvg) <- design$Sample
+names(cvg_over_features) <- design$Sample
 
 design <- subset(design, Kit == "total-RNA") 
-cvg <- cvg[design$Sample]
+cvg_over_features <- cvg_over_features[design$Sample]
 ```
 
 ```{r cov-plots, warning = FALSE, echo = FALSE, message = FALSE, fig.width = 8}
@@ -385,7 +385,6 @@ ans
 
 ## Overlaps with intronic split reads
 
-
 We have a DGEList containing split reads over intronic parts of a gene
 for the total RNA samples, we show how many genes have greater than 10
 intron split reads on average accross samples within a gene:
@@ -422,3 +421,26 @@ png(here::here("img","index_classifications", "overlap_intron_split_reads.png"))
 print(intron_split)
 dev.off()
 ```
+
+
+Split read counts over PSMB7:
+
+```{r split-count}
+id <- parts %>% 
+  filter(gene_name == "PSMB7") %>% 
+  select(gene_id, .drop_ranges = TRUE)
+
+# intronic parts
+row_inx <- which(rownames(split_counts) == as.character(id$gene_id))
+
+tibble::tibble(
+  gene_id = as.character(id$gene_id),
+  part = seq_along(row_inx),
+  total_split = rowSums(split_counts[row_inx, ]),
+  ave_split = rowMeans(split_counts[row_inx, ]),
+  over_ten = total_split > 10
+)
+```
+
+
+
