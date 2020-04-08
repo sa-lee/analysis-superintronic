@@ -9,7 +9,9 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,
-                      fig.path = here::here("img", "method_overlaps/")
+                      fig.path = here::here("img", "method_overlaps/"),
+                      fig.retina = 3,
+                      dpi = 300
                       )
 library(dplyr)
 parts <- readRDS(here::here("data", "complete-annotation.rds"))
