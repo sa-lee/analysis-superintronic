@@ -18,6 +18,7 @@ cvg <- readRDS(here::here("data", "parts-coverage.rds")) %>%
 
 
 gene_names <- c("PSMB7", "EIF2S3", "ARGLU1")
+names(gene_names) <- paste0("(", letters[1:3], ")")
 
 .custom_theme <- theme(axis.title.x = element_blank(),
                        axis.text.x = element_blank(),
@@ -28,15 +29,18 @@ gene_names <- c("PSMB7", "EIF2S3", "ARGLU1")
 
 plot_lists <- lapply(gene_names, function(.x) {
   target <- filter(parts_sub, gene_name == !!.x)
+  label <- names(gene_names)[match(.x, gene_names)]
   pretty_cov_plot(cvg, parts_sub, target,
                   base_size = 12,
                   cvg_theme = .custom_theme,
+                  .label = label,
                   heights = c(2, 0.25)) 
-    
+
 })
 
 
-fig <- wrap_plots(plot_lists, ncol = 3, guides = "keep")
+fig <- wrap_plots(plot_lists, ncol = 3, guides = "keep",
+                  width = c(3,3,3), heights = rep(1, 3))
 
 
-ggsave(here::here("img/Fig5.pdf"), fig, width = 13, height = 3.3)
+ggsave(here::here("img/Fig5.pdf"), fig, width = 11.5)

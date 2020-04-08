@@ -16,7 +16,7 @@
 #' @export
 pretty_cov_plot <- function(cvg, parts, target, 
                             design = NULL, alpha = FALSE, 
-                            base_size = 20, cvg_theme = .default_theme , ...) {
+                            base_size = 20, cvg_theme = .default_theme , .label = NULL, ...) {
   
   if(is(target, "data.frame")) {
     target <- plyranges::filter(parts, gene_id == !!target$gene_id)
@@ -43,7 +43,7 @@ pretty_cov_plot <- function(cvg, parts, target,
     ylim(0, NA) +
     guides(colour = FALSE) +
     scale_color_brewer(palette = "Dark2") +
-    labs(subtitle = paste("Coverage over", target$gene_name),
+    labs(subtitle = paste(.label, "Coverage over", target$gene_name),
          y = "Log coverage"
     ) +
     theme_bw(base_size = base_size) +
@@ -57,7 +57,7 @@ pretty_cov_plot <- function(cvg, parts, target,
     theme(axis.text.y = element_blank(),
           axis.ticks.y = element_blank(),
           axis.title = element_blank(),
-          axis.text.x = element_text(size = 6),
+          axis.text.x = element_text(size = 8),
           panel.grid = element_blank()) 
   patchwork::wrap_plots(p, 
                         track, 
