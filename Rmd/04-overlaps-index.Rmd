@@ -102,7 +102,8 @@ dex_upset
 ```
 
 ```{r index-upset-1, include = FALSE}
-png(here::here("img", "index_classifications", "overlap_index_vs_superintronic.png"))
+png(here::here("img", "index_classifications", "overlap_index_vs_superintronic.png"),
+    res = 300)
 print(dex_upset)
 dev.off()
 ```
@@ -213,7 +214,8 @@ The remaining results make sense, most superintronic results fall into either `+
 a few fall into the remaining categories.
 
 ```{r index-upset-2, include = FALSE}
-png(here::here("img", "index_classifications", "overlap_index_categories_vs_superintronic.png"))
+png(here::here("img", "index_classifications", "overlap_index_categories_vs_superintronic.png"),
+    res = 300)
 print(all_classification_upset)
 dev.off()
 ```
@@ -360,7 +362,8 @@ nmd_sets
 ```
 
 ```{r save-plot, include = FALSE}
-png(here::here("img","index_classifications", "overlap_nmd_vs_index.png"))
+png(here::here("img","index_classifications", "overlap_nmd_vs_index.png"),
+    res = 300)
 print(nmd_sets)
 dev.off()
 ```
@@ -417,7 +420,8 @@ intron_split
 
 
 ```{r split-plot, include = FALSE}
-png(here::here("img","index_classifications", "overlap_intron_split_reads.png"))
+png(here::here("img","index_classifications", "overlap_intron_split_reads.png"),
+    res = 300)
 print(intron_split)
 dev.off()
 ```
