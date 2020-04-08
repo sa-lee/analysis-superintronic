@@ -14,6 +14,13 @@ knitr::opts_chunk$set(echo = TRUE,
                       warning = FALSE,
                       fig.keep = "none",
                       fig.path = here::here("img/index_classifications/"))
+png_us <- function(file) {
+  png(file,
+    res = 300,
+    width  = 7, height = 7,
+    units = "in")
+}
+
 library(plyranges)
 parts <- readRDS(here::here("data", "complete-annotation.rds"))
 
@@ -102,8 +109,7 @@ dex_upset
 ```
 
 ```{r index-upset-1, include = FALSE}
-png(here::here("img", "index_classifications", "overlap_index_vs_superintronic.png"),
-    res = 300)
+png_us(here::here("img", "index_classifications", "overlap_index_vs_superintronic.png"))
 print(dex_upset)
 dev.off()
 ```
@@ -214,8 +220,7 @@ The remaining results make sense, most superintronic results fall into either `+
 a few fall into the remaining categories.
 
 ```{r index-upset-2, include = FALSE}
-png(here::here("img", "index_classifications", "overlap_index_categories_vs_superintronic.png"),
-    res = 300)
+png_us(here::here("img", "index_classifications", "overlap_index_categories_vs_superintronic.png"))
 print(all_classification_upset)
 dev.off()
 ```
@@ -362,8 +367,7 @@ nmd_sets
 ```
 
 ```{r save-plot, include = FALSE}
-png(here::here("img","index_classifications", "overlap_nmd_vs_index.png"),
-    res = 300)
+png_us(here::here("img","index_classifications", "overlap_nmd_vs_index.png"))
 print(nmd_sets)
 dev.off()
 ```
@@ -420,8 +424,7 @@ intron_split
 
 
 ```{r split-plot, include = FALSE}
-png(here::here("img","index_classifications", "overlap_intron_split_reads.png"),
-    res = 300)
+png_us(here::here("img","index_classifications", "overlap_intron_split_reads.png"))
 print(intron_split)
 dev.off()
 ```
