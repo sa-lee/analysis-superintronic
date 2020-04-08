@@ -123,6 +123,10 @@ ggsave(here::here("img", "Fig3a.pdf"), fig3a, width = 11)
 source(here::here("R", "prettycov.R"))
 
 # replicate figure 3b, two short two long
+gene_names <- c("ENSG00000136997.17", "ENSG00000117525.13", 
+                "ENSG00000196937.10", "ENSG00000196428.12")
+names(gene_names) <- paste0("(", letters[1:4], ")")
+
 targets <- filter(parts, 
                   gene_id %in% c("ENSG00000136997.17", "ENSG00000117525.13", 
                                  "ENSG00000196937.10", "ENSG00000196428.12")
@@ -141,6 +145,7 @@ short <- lapply(1:2,
                                              alpha = TRUE, 
                                              base_size = 12,
                                              cvg_theme = .custom_theme,
+                                             .label = names(gene_names)[.x],
                                              heights = c(2, 0.25))) %>% 
   patchwork::wrap_plots(ncol = 2, guides = "keep")
 
@@ -149,6 +154,7 @@ long <- lapply(3:4, function(.x) pretty_cov_plot(cvg, parts,
                                                  alpha = TRUE, 
                                                  base_size = 12,
                                                  cvg_theme = .custom_theme,
+                                                 .label = names(gene_names)[.x],
                                                  heights = c(2, 0.25))) %>% 
   patchwork::wrap_plots(ncol = 2, guides = "keep")
 
