@@ -7,6 +7,7 @@
 #' @param ... Other options passed to `patchwork::wrap_plots()`
 #' @param base_size Default font size for tracks
 #' @param cvg_theme a ggplot2 theme for control appearance 
+#' @param highlight a GRanges object to add rectangle to a region of interest
 #' 
 #' @import ggplot2 GenomicRanges plyranges superintronic S4Vectors
 #' @importFrom dplyr case_when
@@ -16,7 +17,7 @@
 #' @export
 pretty_cov_plot <- function(cvg, parts, target, 
                             design = NULL, alpha = FALSE, 
-                            base_size = 20, cvg_theme = .default_theme , .label = NULL, ...) {
+                            base_size = 20, cvg_theme = .default_theme , .label = NULL, highlight = NULL, ...) {
   
   if(is(target, "data.frame")) {
     target <- plyranges::filter(parts, gene_id == !!target$gene_id)
@@ -37,6 +38,22 @@ pretty_cov_plot <- function(cvg, parts, target,
                                       score = log_score, 
                                       colour = feature_type,  
                                       facets = dplyr::vars(var))
+  }
+  
+  if (!is.null(highlight)) {
+    rect <- as.data.frame(highlight)
+    if (runValue(strand(target)) == "-") {
+      new_start <- rect$end
+      new_end <- rect$start
+      rect$start <- new_start
+      rect$end <- new_end
+    }
+    layer_rect <- geom_rect(data = rect, 
+                            aes(xmin = start, xmax = end, ymin = -Inf, ymax = Inf),
+                            color = "grey20",
+                            alpha = 0.05,
+                            inherit.aes = FALSE)
+    p <- p + layer_rect
   }
   
   p <- p +     
