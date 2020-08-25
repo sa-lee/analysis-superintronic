@@ -36,14 +36,14 @@ targets <- filter(parts,
                        axis.text.y = element_text(size = 8),
                        strip.background = element_blank())
 
-
+38836780- 38837383:-
 panel_a <- pretty_cov_plot(cvg, parts, targets[1,], 
                            design, 
                            base_size = 12,
                            cvg_theme = .custom_theme,
                            highlight = as_granges(data.frame(seqnames = "chr19",
-                                                             start = 38836780L,
-                                                             end = 38837383L)),
+                                                             start = 38837586L,
+                                                             end = 38837593L)),
                            heights = c(2, 0.25))
 
 
