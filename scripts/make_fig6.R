@@ -27,7 +27,6 @@ targets <- filter(parts,
   select(gene_id, gene_name) %>% 
   as.data.frame()
 
-# targets <- targets[c(3,1,2),]
 
 .custom_theme <- theme(axis.title.x = element_blank(),
                        axis.text.x = element_blank(),
@@ -36,14 +35,13 @@ targets <- filter(parts,
                        axis.text.y = element_text(size = 8),
                        strip.background = element_blank())
 
-38836780- 38837383:-
 panel_a <- pretty_cov_plot(cvg, parts, targets[1,], 
                            design, 
                            base_size = 12,
                            cvg_theme = .custom_theme,
                            highlight = as_granges(data.frame(seqnames = "chr19",
-                                                             start = 38837586L,
-                                                             end = 38837593L)),
+                                                             start = 38837652L,
+                                                             end = 38838396L)),
                            heights = c(2, 0.25))
 
 
@@ -63,6 +61,6 @@ panel_c <- pretty_cov_plot(cvg, parts, targets[3,],
                            heights = c(2, 0.25))
 
 
-fig6 <- patchwork::wrap_plots(panel_a, panel_b, panel_c, ncol = 3)
+fig6 <- patchwork::wrap_plots(panel_a, panel_b, panel_c, nrow = 3)
 
-ggsave(here::here("img/Fig6.pdf"), fig6, width = 11)
+ggsave(here::here("img/Fig6.pdf"), fig6, width = 11, height = 11)

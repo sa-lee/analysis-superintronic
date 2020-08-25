@@ -40,22 +40,6 @@ pretty_cov_plot <- function(cvg, parts, target,
                                       facets = dplyr::vars(var))
   }
   
-  if (!is.null(highlight)) {
-    rect <- as.data.frame(highlight)
-    if (runValue(strand(target)) == "-") {
-      new_start <- rect$end
-      new_end <- rect$start
-      rect$start <- new_start
-      rect$end <- new_end
-    }
-    layer_rect <- geom_rect(data = rect, 
-                            aes(xmin = start, xmax = end, ymin = -Inf, ymax = Inf),
-                            color = "grey20",
-                            alpha = 0.05,
-                            inherit.aes = FALSE)
-    p <- p + layer_rect
-  }
-  
   p <- p +     
     ylim(0, NA) +
     guides(colour = FALSE) +
@@ -76,6 +60,24 @@ pretty_cov_plot <- function(cvg, parts, target,
           axis.title = element_blank(),
           axis.text.x = element_text(size = 8),
           panel.grid = element_blank()) 
+  
+  if (!is.null(highlight)) {
+    rect <- as.data.frame(highlight)
+    if (runValue(strand(target)) == "-") {
+      new_start <- rect$end
+      new_end <- rect$start
+      rect$start <- new_start
+      rect$end <- new_end
+    }
+    layer_rect <- geom_segment(data = rect, 
+                            aes(x = start, xend = end, y = 0.5, yend = 0.5),
+                            color = "grey20",
+                            size = 10,
+                            alpha = 0.5,
+                            inherit.aes = FALSE)
+    track <- track + layer_rect
+  }
+  
   patchwork::wrap_plots(p, 
                         track, 
                         ncol = 1, 
